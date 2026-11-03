@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>國小學年評量結果分析表系統 (手機行動優化版)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@600;700&display=swap');
+    body {
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .serif-title {
+      font-family: 'Noto Serif TC', serif;
+    }
+    
+    /* Touch target comfort */
+    input, button, select, textarea {
+      touch-action: manipulation;
+    }
+
+    /* Print Styles: 100% match the school official form on A4 */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #print-modal-content, #print-modal-content * {
+        visibility: visible;
+      }
+      #print-modal-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 1.5cm;
+        box-shadow: none !important;
+        border: none !important;
+        background: white !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 1cm;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-10">
+
+  <!-- Mobile-Friendly Non-Sticky Header: Will naturally scroll away so it NEVER covers input fields! -->
+  <header class="bg-indigo-700 text-white shadow-sm no-print relative">
+    <div class="max-w-5xl mx-auto px-3 py-1.5 flex items-center justify-between">
+      <div class="flex items-center space-x-1.5">
+        <span class="text-lg">📊</span>
+        <div>
+          <h1 class="text-xs sm:text-sm font-bold tracking-wide flex items-center gap-1">
+            <span>評量結果分析表系統</span>
+            <span class="text-[9px] bg-indigo-500 px-1 py-0.5 rounded font-normal">手機版</span>
+          </h1>
+          <p class="text-[10px] text-indigo-200" id="top-school-subtitle">高雄市陽明國小 113學年</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="btn-load-demo" class="px-2 py-1 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-[11px] sm:text-xs font-semibold rounded shadow-xs transition" title="載入11班示範資料">
+          ⚡ 載入示範數據 (3年級8班)
+        </button>
+        <button id="btn-preview-print" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-semibold rounded shadow-xs transition" title="產生A4公文表">
+          🖨️ 產生正式公文表
+        </button>
+      </div>
+    </div>
+
+    <!-- Segmented Navigation Tabs: Normal flow (NOT sticky) so it scrolls out of the way when keyboard opens -->
+    <nav id="mobile-nav-bar" class="bg-indigo-800/95 border-t border-indigo-600/60 px-2 py-1">
+      <div class="max-w-5xl mx-auto flex items-center justify-between gap-1 sm:gap-2">
+        <button class="nav-tab-btn flex-1 py-1 px-1 rounded text-xs font-bold transition flex items-center justify-center gap-1 text-white bg-indigo-600 shadow-xs border border-indigo-400" data-target="tab-input">
+          <span class="text-xs">✍️</span>
+          <span>班級填報</span>
+        </button>
+        <button class="nav-tab-btn flex-1 py-1 px-1 rounded text-xs font-semibold transition flex items-center justify-center gap-1 text-indigo-100 hover:text-white hover:bg-indigo-700/60" data-target="tab-summary">
+          <span class="text-xs">📈</span>
+          <span>學年總表</span>
+        </button>
+        <button class="nav-tab-btn flex-1 py-1 px-1 rounded text-xs font-semibold transition flex items-center justify-center gap-1 text-indigo-100 hover:text-white hover:bg-indigo-700/60" data-target="tab-reflection">
+          <span class="text-xs">💡</span>
+          <span>反思修正</span>
+        </button>
+        <button class="nav-tab-btn flex-1 py-1 px-1 rounded text-xs font-semibold transition flex items-center justify-center gap-1 text-indigo-100 hover:text-white hover:bg-indigo-700/60" data-target="tab-settings">
+          <span class="text-xs">⚙️</span>
+          <span>設定/協作</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-5xl mx-auto px-3 sm:px-4 py-3 space-y-4">
+
+    <!-- Progress Status Bar -->
+    <div id="status-card" class="bg-white rounded-xl shadow-xs border border-slate-200 p-3 sm:p-4">
+      <div class="flex items-center justify-between gap-2 mb-1">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span id="status-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+            填報進行中
+          </span>
+          <span class="text-xs font-bold text-slate-700">學年 11 班填報進度：</span>
+          <span class="text-xs font-bold text-indigo-700"><span id="submitted-count">0</span> / <span id="total-class-count">11</span> 班</span>
+        </div>
+        <div class="text-xs font-bold text-indigo-600" id="progress-percent">0%</div>
+      </div>
+      
+      <p id="status-desc" class="text-[11px] text-slate-500 mb-2">
+        已設定學年 11 個班級（401~411），表頭完全不釘頂，鍵盤彈起時絕不遮擋輸入格。
+      </p>
+
+      <!-- Progress Line -->
+      <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200 mb-2.5">
+        <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+      </div>
+
+      <!-- Scrollable Quick Class Picker -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar" id="class-badges-container">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- ==================== TAB 1: 班級填報 (完全無遮擋，表頭自然滾動，純數字鍵盤) ==================== -->
+    <section id="tab-input" class="tab-pane space-y-3">
+      <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
+        <!-- Class Selector Banner -->
+        <div class="flex items-center justify-between bg-indigo-50/80 p-2.5 rounded-lg border border-indigo-100">
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm font-bold text-indigo-900">目前填報班級：</span>
+            <select id="current-class-selector" class="px-2 py-1 border-2 border-indigo-500 rounded bg-white font-bold text-indigo-900 text-sm focus:outline-none">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <span id="class-status-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-200 text-slate-600">未填報</span>
+        </div>
+
+        <!-- Grade Distribution Inputs (Clean Mobile Layout) -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-bold text-slate-700">各級距人數輸入 (點選直接輸入數字)：</label>
+            <span class="text-[11px] text-emerald-600 font-medium">純數字小鍵盤</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <!-- 100 分 -->
+            <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 flex flex-col justify-between">
+              <span class="text-xs font-bold text-indigo-800">100 分 (滿分)</span>
+              <div class="flex items-center mt-1">
+                <button type="button" class="btn-step-minus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-100">-</button>
+                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" id="input-score-100" class="score-input flex-1 w-full mx-1 py-1.5 border border-slate-300 rounded bg-white text-base font-bold text-center focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="0">
+                <button type="button" class="btn-step-plus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-100">+</button>
+              </div>
+            </div>
+
+            <!-- 90~99 分 -->
+            <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 flex flex-col justify-between">
+              <span class="text-xs font-bold text-blue-800">90 ～ 99 分</span>
+              <div class="flex items-center mt-1">
+                <button type="button" class="btn-step-minus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-90">-</button>
+                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" id="input-score-90" class="score-input flex-1 w-full mx-1 py-1.5 border border-slate-300 rounded bg-white text-base font-bold text-center focus:ring-2 focus:ring-blue-500 focus:outline-none" value="0">
+                <button type="button" class="btn-step-plus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-90">+</button>
+              </div>
+            </div>
+
+            <!-- 80~89 分 -->
+            <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 flex flex-col justify-between">
+              <span class="text-xs font-bold text-teal-800">80 ～ 89 分</span>
+              <div class="flex items-center mt-1">
+                <button type="button" class="btn-step-minus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-80">-</button>
+                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" id="input-score-80" class="score-input flex-1 w-full mx-1 py-1.5 border border-slate-300 rounded bg-white text-base font-bold text-center focus:ring-2 focus:ring-teal-500 focus:outline-none" value="0">
+                <button type="button" class="btn-step-plus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-80">+</button>
+              </div>
+            </div>
+
+            <!-- 70~79 分 -->
+            <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 flex flex-col justify-between">
+              <span class="text-xs font-bold text-amber-800">70 ～ 79 分</span>
+              <div class="flex items-center mt-1">
+                <button type="button" class="btn-step-minus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-70">-</button>
+                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" id="input-score-70" class="score-input flex-1 w-full mx-1 py-1.5 border border-slate-300 rounded bg-white text-base font-bold text-center focus:ring-2 focus:ring-amber-500 focus:outline-none" value="0">
+                <button type="button" class="btn-step-plus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-70">+</button>
+              </div>
+            </div>
+
+            <!-- 60~69 分 -->
+            <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 flex flex-col justify-between">
+              <span class="text-xs font-bold text-orange-800">60 ～ 69 分</span>
+              <div class="flex items-center mt-1">
+                <button type="button" class="btn-step-minus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-60">-</button>
+                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" id="input-score-60" class="score-input flex-1 w-full mx-1 py-1.5 border border-slate-300 rounded bg-white text-base font-bold text-center focus:ring-2 focus:ring-orange-500 focus:outline-none" value="0">
+                <button type="button" class="btn-step-plus w-8 h-8 rounded bg-white border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 text-sm" data-target="input-score-60">+</button>
+              </div>
+            </div>
+
+            <!-- 60 分以下 -->
+            <div class="bg-rose-50/70 p-2 rounded-lg border border-rose-200 flex flex-col justify-between">
+              <span class="text-xs font-bold text-rose-800">60 分以下 (不及格)</span>
+              <div class="flex items-center mt-1">
+                <button type="button" class="btn-step-minus w-8 h-8 rounded bg-white border border-rose-300 font-bold text-rose-700 hover:bg-rose-100 text-sm" data-target="input-score-below60">-</button>
+                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" id="input-score-below60" class="score-input flex-1 w-full mx-1 py-1.5 border border-rose-300 rounded bg-white text-base font-bold text-center text-rose-700 focus:ring-2 focus:ring-rose-500 focus:outline-none" value="0">
+                <button type="button" class="btn-step-plus w-8 h-8 rounded bg-white border border-rose-300 font-bold text-rose-700 hover:bg-rose-100 text-sm" data-target="input-score-below60">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Class Note -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">本班教學觀察 / 特殊生註記 (選填)：</label>
+          <input type="text" id="input-class-note" placeholder="例如：第4題字詞辨析失分較多、有1位資源班抽離施測" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <!-- Class Quick Stats -->
+        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <div>
+            <span class="text-slate-500">實測總人數：</span>
+            <strong id="stat-class-total" class="text-indigo-700 font-bold">0 人</strong>
+          </div>
+          <div>
+            <span class="text-slate-500">90分以上：</span>
+            <strong id="stat-class-high" class="text-blue-700 font-bold">0 人 (0%)</strong>
+          </div>
+          <div>
+            <span class="text-slate-500">及格人數：</span>
+            <strong id="stat-class-pass" class="text-emerald-700 font-bold">0 人 (0%)</strong>
+          </div>
+          <div>
+            <span class="text-slate-500">60分以下：</span>
+            <strong id="stat-class-remedial" class="text-rose-600 font-bold">0 人 (0%)</strong>
+          </div>
+        </div>
+
+        <!-- Actions: Large touch-friendly buttons -->
+        <div class="pt-1 flex flex-col sm:flex-row gap-2">
+          <button id="btn-save-class" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-sm rounded-lg shadow-sm transition flex items-center justify-center gap-1.5">
+            <span>💾 儲存並更新本班成績</span>
+          </button>
+          <div class="flex gap-2">
+            <button id="btn-copy-class-code" class="flex-1 py-2.5 px-3 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 text-xs font-bold rounded-lg transition" title="複製此班代碼分享給召集人">
+              📋 複製單班代碼
+            </button>
+            <button id="btn-clear-class" class="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg transition">
+              清空此班數據
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: 學年總表 (即時加總與對照) ==================== -->
+    <section id="tab-summary" class="tab-pane hidden space-y-4">
+      <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div>
+            <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
+              <span>📈</span> ◆ 學年學生成績分布 (即時自動加總)
+            </h3>
+            <p class="text-[11px] text-slate-500">各班填報隨時累計，百分比四捨五入至小數第一位，總和 100%</p>
+          </div>
+          <button id="btn-toggle-view" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-md transition">
+            切換「各班橫向細節對照表」
+          </button>
+        </div>
+
+        <!-- Aggregated Result Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-center border-collapse border border-slate-300 text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 font-bold">
+                <th class="border border-slate-300 py-2 px-2">分 數</th>
+                <th class="border border-slate-300 py-2 px-2">人 數</th>
+                <th class="border border-slate-300 py-2 px-2">比 例</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 text-slate-800">
+              <tr>
+                <td class="border border-slate-300 py-1.5 font-medium">100 分</td>
+                <td class="border border-slate-300 py-1.5 font-bold text-indigo-700"><span id="sum-count-100">0</span> 人</td>
+                <td class="border border-slate-300 py-1.5 text-slate-600"><span id="sum-ratio-100">0.0</span> %</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-300 py-1.5 font-medium">90～99 分</td>
+                <td class="border border-slate-300 py-1.5 font-bold text-blue-700"><span id="sum-count-90">0</span> 人</td>
+                <td class="border border-slate-300 py-1.5 text-slate-600"><span id="sum-ratio-90">0.0</span> %</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-300 py-1.5 font-medium">80～89 分</td>
+                <td class="border border-slate-300 py-1.5 font-bold text-teal-700"><span id="sum-count-80">0</span> 人</td>
+                <td class="border border-slate-300 py-1.5 text-slate-600"><span id="sum-ratio-80">0.0</span> %</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-300 py-1.5 font-medium">70～79 分</td>
+                <td class="border border-slate-300 py-1.5 font-bold text-amber-700"><span id="sum-count-70">0</span> 人</td>
+                <td class="border border-slate-300 py-1.5 text-slate-600"><span id="sum-ratio-70">0.0</span> %</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-300 py-1.5 font-medium">60～69 分</td>
+                <td class="border border-slate-300 py-1.5 font-bold text-orange-700"><span id="sum-count-60">0</span> 人</td>
+                <td class="border border-slate-300 py-1.5 text-slate-600"><span id="sum-ratio-60">0.0</span> %</td>
+              </tr>
+              <tr class="bg-rose-50/50">
+                <td class="border border-slate-300 py-1.5 font-medium text-rose-700">60 分以下</td>
+                <td class="border border-slate-300 py-1.5 font-bold text-rose-700"><span id="sum-count-below60">0</span> 人</td>
+                <td class="border border-slate-300 py-1.5 text-rose-600 font-semibold"><span id="sum-ratio-below60">0.0</span> %</td>
+              </tr>
+              <tr class="bg-indigo-50/60 font-bold text-slate-900">
+                <td class="border border-slate-300 py-2">總 人 數</td>
+                <td class="border border-slate-300 py-2 text-indigo-900 text-sm sm:text-base"><span id="sum-count-total">0</span> 人</td>
+                <td class="border border-slate-300 py-2 text-indigo-900">100.0 %</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Chart Container -->
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <div class="text-xs font-bold text-slate-600 mb-2">學年各級距成績分佈圖表</div>
+          <div class="relative h-56 w-full">
+            <canvas id="gradeDistributionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 11 Classes Breakdown Matrix -->
+        <div id="breakdown-container">
+          <h4 class="font-bold text-slate-700 text-xs sm:text-sm mb-2">全學年各班數據明細（橫向對照）</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-center border-collapse border border-slate-200 text-[11px] sm:text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold">
+                <tr>
+                  <th class="border border-slate-200 p-1.5">班級</th>
+                  <th class="border border-slate-200 p-1.5">狀態</th>
+                  <th class="border border-slate-200 p-1.5">100</th>
+                  <th class="border border-slate-200 p-1.5">90~99</th>
+                  <th class="border border-slate-200 p-1.5">80~89</th>
+                  <th class="border border-slate-200 p-1.5">70~79</th>
+                  <th class="border border-slate-200 p-1.5">60~69</th>
+                  <th class="border border-slate-200 p-1.5 text-rose-600">&lt;60</th>
+                  <th class="border border-slate-200 p-1.5 font-bold">總人數</th>
+                  <th class="border border-slate-200 p-1.5">及格率</th>
+                  <th class="border border-slate-200 p-1.5 text-left">備註</th>
+                </tr>
+              </thead>
+              <tbody id="breakdown-tbody" class="divide-y divide-slate-100">
+                <!-- Injected dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: 反思修正 (智慧診斷與編輯) ==================== -->
+    <section id="tab-reflection" class="tab-pane hidden space-y-3">
+      <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-2">
+          <div>
+            <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
+              <span>💡</span> ◆ 反思修正 (專業診斷建議)
+            </h3>
+            <p class="text-[11px] text-slate-500">依據學年 11 班加總成效，自動生成具備教育專業度之教學檢討與命題修正</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="select-reflection-scenario" class="text-xs px-2 py-1.5 border border-slate-300 rounded bg-slate-50 text-slate-700">
+              <option value="auto">🤖 依數據智慧判定</option>
+              <option value="normal">📈 標準常態分佈</option>
+              <option value="high">🏆 高分群集中</option>
+              <option value="bimodal">⚡ 雙峰M型化分佈</option>
+              <option value="hard">⚠️ 及格率偏低</option>
+            </select>
+            <button id="btn-generate-reflection" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold rounded shadow-xs transition">
+              ✨ 重新自動生成反思
+            </button>
+          </div>
+        </div>
+
+        <!-- Reflection Editor -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-slate-600">反思修正內文（可直接點擊編輯修改，將自動帶入最終列印公文表）：</span>
+            <button id="btn-copy-reflection" class="text-xs text-indigo-600 hover:underline">
+              複製文字
+            </button>
+          </div>
+          <textarea id="textarea-reflection" rows="10" class="w-full p-3 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed font-mono shadow-inner"></textarea>
+        </div>
+
+        <button id="btn-insert-sample" class="text-xs text-indigo-600 hover:underline">
+          + 插入教學補救精進建議
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: 設定與協作 (公文表頭、11班管理、LINE代碼與外開連結) ==================== -->
+    <section id="tab-settings" class="tab-pane hidden space-y-4">
+      
+      <!-- LINE Force External Browser Banner -->
+      <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-xl shadow-xs p-3.5 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+            <span>💬</span> LINE 強迫調用外部瀏覽器開啟 (黃金指令)
+          </div>
+          <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">避免被LINE擋住</span>
+        </div>
+        <p class="text-[11px] text-emerald-100 leading-relaxed">
+          在傳給老師的 LINE 連結後方加上 <strong>?openExternalBrowser=1</strong>，老師在 LINE 點選時就會直接喚起手機原生 Chrome / Safari，徹底擺脫 LINE 內建視窗！
+        </p>
+        <button id="btn-copy-line-url" class="w-full py-2 bg-white text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 font-bold text-xs rounded-md shadow-xs transition flex items-center justify-center gap-1.5">
+          <span>📋 複製「LINE 強制外開瀏覽器」網址語法</span>
+        </button>
+      </div>
+
+      <!-- Section A: Official Paper Header Info -->
+      <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
+        <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5 pb-2 border-b border-slate-100">
+          <span>⚙️</span> 評量表基本設定 (對應紙本表頭)
+        </h3>
+
+        <div class="space-y-2.5 text-xs sm:text-sm">
+          <div>
+            <label class="block text-slate-600 font-medium mb-1">學校全稱</label>
+            <input type="text" id="info-school" value="高雄市陽明國小" class="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-600 font-medium mb-1">學年度</label>
+              <div class="flex items-center gap-1">
+                <input type="number" id="info-year" value="113" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+                <span class="text-xs text-slate-500 shrink-0">學年</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-slate-600 font-medium mb-1">學期</label>
+              <select id="info-semester" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+                <option value="一" selected>第 一 學期</option>
+                <option value="二">第 二 學期</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-600 font-medium mb-1">科目名稱</label>
+              <input type="text" id="info-subject" value="國語" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+            </div>
+            <div>
+              <label class="block text-slate-600 font-medium mb-1">評量期別</label>
+              <input type="text" id="info-exam-period" value="一" placeholder="一 / 二 / 期中" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-600 font-medium mb-1">命題教師</label>
+              <input type="text" id="info-teacher" value="陳美玲 老師" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+            </div>
+            <div>
+              <label class="block text-slate-600 font-medium mb-1">版本</label>
+              <input type="text" id="info-version" value="南一版" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 font-medium mb-1">使用年級班別（表頭顯示）</label>
+            <input type="text" id="info-grade-label" value="四年級 1~11 班" class="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section B: 11 Classes Configuration -->
+      <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
+        <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center justify-between pb-2 border-b border-slate-100">
+          <span>🏫 學年總班級管理 (預設 11 個班)</span>
+          <span class="text-xs text-indigo-600 font-normal">已設定 401~411</span>
+        </h3>
+
+        <div class="space-y-2 text-xs sm:text-sm">
+          <p class="text-slate-500 text-xs">
+            系統目前已為您預設好 <strong>11 個班級</strong>（401 ～ 411 班）。若需要調整或自訂，可在下方直接變更並按套用：
+          </p>
+
+          <div class="flex items-center gap-2">
+            <select id="select-total-classes" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm">
+              <option value="11" selected>11 個班 (401~411 班 - 預設)</option>
+              <option value="11-g3">11 個班 (301~311 班)</option>
+              <option value="8">8 個班 (401~408 班)</option>
+              <option value="10">10 個班 (401~410 班)</option>
+              <option value="12">12 個班 (401~412 班)</option>
+              <option value="custom">自訂班級清單...</option>
+            </select>
+            <button id="btn-apply-classes" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs rounded-md shrink-0">
+              套用
+            </button>
+          </div>
+
+          <div id="custom-classes-box" class="hidden">
+            <input type="text" id="input-custom-classes" placeholder="用逗號隔開，例如：401, 402, 403, 404, 405...411" class="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section C: LINE Multi-Teacher Collaboration -->
+      <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
+            <span>📤</span> 班級代碼匯入與備份
+          </h3>
+          <button id="btn-share-code" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded transition">
+            📤 班級匯入/匯出代碼
+          </button>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <p class="text-slate-600 leading-relaxed">
+            各班老師在手機上輸入完成後按「複製單班代碼」，學年召集人在下方貼上老師回傳的代碼，點擊「匯入」，系統立即合併該班：
+          </p>
+          <textarea id="import-code-area" rows="3" placeholder="貼上老師在 LINE 群傳來的代碼 (例如：[GRADE_DATA]:eyJjbGFzcyI6IjQwMSI...)" class="w-full p-2 border border-slate-300 rounded-md font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+          <div class="flex gap-2">
+            <button id="btn-do-import" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-md transition">
+              📥 解析並匯入此班成績
+            </button>
+            <button id="btn-copy-all-export" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-md transition">
+              📋 備份全學年 JSON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section D: Print & Reset -->
+      <div class="flex flex-col sm:flex-row gap-2 pt-1">
+        <button id="btn-settings-preview-print" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-lg shadow-xs transition flex items-center justify-center gap-1.5">
+          <span>🖨️ 產生正式公文表</span>
+        </button>
+        <button id="btn-reset-all" class="py-2.5 px-4 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition">
+          重設
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Print / Official Form Preview (Exact Photo Reproduction for 11 Classes) -->
+  <div id="print-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto no-print">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden">
+      <!-- Modal Bar -->
+      <div class="px-4 py-3 bg-slate-800 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+          <span>🖨️</span>
+          <h3 class="font-bold text-sm">評量結果分析表 正式公文列印預覽 (A4)</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-trigger-print" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded shadow transition">
+            列印 / 另存為 PDF
+          </button>
+          <button id="btn-close-modal" class="p-1 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Preview Area -->
+      <div class="p-3 sm:p-6 overflow-y-auto bg-slate-100 flex-1">
+        <!-- Target Official Paper Layout -->
+        <div id="print-modal-content" class="bg-white mx-auto p-6 sm:p-10 shadow-md border border-slate-300 text-black max-w-[210mm] min-h-[297mm] flex flex-col justify-between text-[13px] leading-relaxed">
+          <div>
+            <!-- Header Title -->
+            <div class="text-center font-bold text-base sm:text-lg tracking-wider mb-5 serif-title border-b-2 border-black pb-2">
+              <span id="p-school">高雄市陽明國小</span>
+              <span id="p-year" class="underline underline-offset-4 mx-1">113</span>學年度 
+              第<span id="p-semester" class="underline underline-offset-4 mx-1">一</span>學期 
+              <span id="p-subject" class="underline underline-offset-4 mx-1">國語</span>科目 
+              期<span id="p-exam-period" class="underline underline-offset-4 mx-1">一</span>評量 
+              評量結果分析表
+            </div>
+
+            <!-- Block 1: Exam Info Table (4-cells) -->
+            <div class="mb-4">
+              <div class="font-bold mb-1 flex items-center text-[12px]">
+                <span>◆ 試題名稱、版本、適用年級及命題教師：</span>
+              </div>
+              <table class="w-full border-collapse border border-black text-center text-[12px]">
+                <tr>
+                  <td class="border border-black py-2 px-2 font-semibold bg-slate-50 w-24">科目名稱</td>
+                  <td id="p-info-subject" class="border border-black py-2 px-2 text-left">國語</td>
+                  <td class="border border-black py-2 px-2 font-semibold bg-slate-50 w-28">使用年級班別</td>
+                  <td id="p-info-grade-label" class="border border-black py-2 px-2 text-left">四年級 1~11 班</td>
+                </tr>
+                <tr>
+                  <td class="border border-black py-2 px-2 font-semibold bg-slate-50">命題教師</td>
+                  <td id="p-info-teacher" class="border border-black py-2 px-2 text-left">陳美玲 老師</td>
+                  <td class="border border-black py-2 px-2 font-semibold bg-slate-50">版本</td>
+                  <td id="p-info-version" class="border border-black py-2 px-2 text-left">南一版</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Block 2: Grade Distribution Table -->
+            <div class="mb-4">
+              <div class="font-bold mb-1 flex items-center text-[12px]">
+                <span>◆ 學年學生成績分布：</span>
+              </div>
+              <table class="w-full border-collapse border border-black text-center text-[12px]">
+                <thead>
+                  <tr class="bg-slate-50 font-bold">
+                    <th class="border border-black py-1.5 px-3 w-1/3">分 數</th>
+                    <th class="border border-black py-1.5 px-3 w-1/3">人 數</th>
+                    <th class="border border-black py-1.5 px-3 w-1/3">比 例</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="border border-black py-1">100 分</td>
+                    <td class="border border-black py-1"><span id="p-count-100">0</span> 人</td>
+                    <td class="border border-black py-1"><span id="p-ratio-100">0.0</span> %</td>
+                  </tr>
+                  <tr>
+                    <td class="border border-black py-1">90～99 分</td>
+                    <td class="border border-black py-1"><span id="p-count-90">0</span> 人</td>
+                    <td class="border border-black py-1"><span id="p-ratio-90">0.0</span> %</td>
+                  </tr>
+                  <tr>
+                    <td class="border border-black py-1">80～89 分</td>
+                    <td class="border border-black py-1"><span id="p-count-80">0</span> 人</td>
+                    <td class="border border-black py-1"><span id="p-ratio-80">0.0</span> %</td>
+                  </tr>
+                  <tr>
+                    <td class="border border-black py-1">70～79 分</td>
+                    <td class="border border-black py-1"><span id="p-count-70">0</span> 人</td>
+                    <td class="border border-black py-1"><span id="p-ratio-70">0.0</span> %</td>
+                  </tr>
+                  <tr>
+                    <td class="border border-black py-1">60～69 分</td>
+                    <td class="border border-black py-1"><span id="p-count-60">0</span> 人</td>
+                    <td class="border border-black py-1"><span id="p-ratio-60">0.0</span> %</td>
+                  </tr>
+                  <tr>
+                    <td class="border border-black py-1">60 分以下</td>
+                    <td class="border border-black py-1"><span id="p-count-below60">0</span> 人</td>
+                    <td class="border border-black py-1"><span id="p-ratio-below60">0.0</span> %</td>
+                  </tr>
+                  <tr class="font-bold">
+                    <td class="border border-black py-1.5">總 人 數</td>
+                    <td class="border border-black py-1.5"><span id="p-count-total">0</span> 人</td>
+                    <td class="border border-black py-1.5">100.0 %</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Block 3: Reflection & Remediation -->
+            <div class="mb-5">
+              <div class="font-bold mb-1 flex items-center text-[12px]">
+                <span>◆ 反思修正：</span>
+              </div>
+              <div id="p-reflection-lines" class="text-[12px] text-slate-900 border border-black p-3 min-h-[160px] whitespace-pre-wrap leading-relaxed">
+                <!-- Reflection content injected here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Block 4: Signature Area -->
+          <div class="pt-4 border-t border-dashed border-slate-300">
+            <div class="mb-8 text-[12px]">
+              <span class="font-bold">學年教師簽章：</span>
+              <span id="p-teacher-signatures" class="text-slate-500 text-[11px] ml-1">（401~411 各班級任導師會簽）</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 text-center text-[12px] font-bold">
+              <div>教學組長：_________________</div>
+              <div>教務主任：_________________</div>
+              <div>校　　長：_________________</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Share / Import Single Class Code -->
+  <div id="share-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-4 space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800 text-sm">跨班級非同步協作代碼 (LINE/免伺服器)</h3>
+        <button id="btn-close-share" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+      </div>
+      <p class="text-slate-600 text-xs leading-relaxed">
+        各班老師在自己手機輸入完後複製代碼傳到 LINE 群，召集人貼在下方即可一鍵整合！
+      </p>
+      <textarea id="modal-import-code-area" rows="3" placeholder="貼上老師代碼..." class="w-full p-2 border border-slate-300 rounded font-mono text-xs"></textarea>
+      <div class="flex justify-end gap-2">
+        <button id="btn-modal-do-import" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded">
+          匯入整合
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-page Copy Fallback Modal (Canvas Safe) -->
+  <div id="copy-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-4 space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 id="copy-modal-title" class="font-bold text-slate-800 text-sm">請複製以下內容</h3>
+        <button id="btn-close-copy-modal" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+      </div>
+      <textarea id="copy-modal-text" rows="5" class="w-full p-2 border border-slate-300 rounded-md font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" readonly></textarea>
+      <div class="flex justify-end gap-2">
+        <button id="btn-select-copy-modal" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-md">
+          全選反白文字
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-16 md:bottom-5 right-4 z-50 hidden bg-slate-800 text-white px-3.5 py-2.5 rounded-lg shadow-xl text-xs sm:text-sm flex items-center gap-2 transform transition-all duration-300">
+    <span id="toast-icon">ℹ️</span>
+    <span id="toast-msg">操作成功</span>
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    // State: Default 11 classes (401 ~ 411)
+    const default11Classes = ["401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411"];
+    let appState = {
+      school: "高雄市陽明國小",
+      year: 113,
+      semester: "一",
+      subject: "國語",
+      examPeriod: "一",
+      teacher: "陳美玲 老師",
+      version: "南一版",
+      gradeLabel: "四年級 1~11 班",
+      classList: [...default11Classes],
+      selectedClass: "401",
+      classData: {},
+      reflection: "",
+      scenario: "auto"
+    };
+
+    let distributionChart = null;
+    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_V2_MOBILE";
+
+    function showToast(msg, icon = "✅") {
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toast-msg");
+      const toastIcon = document.getElementById("toast-icon");
+      toastMsg.textContent = msg;
+      toastIcon.textContent = icon;
+      toast.classList.remove("hidden");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+      }, 3500);
+    }
+
+    function safeCopy(text, title = "請手動複製以下內容") {
+      let copied = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast("已成功複製到剪貼簿！");
+        }).catch(() => {
+          openCopyFallbackModal(text, title);
+        });
+        return;
+      }
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        copied = document.execCommand("copy");
+        document.body.removeChild(textarea);
+      } catch (e) {
+        copied = false;
+      }
+
+      if (copied) {
+        showToast("已成功複製到剪貼簿！");
+      } else {
+        openCopyFallbackModal(text, title);
+      }
+    }
+
+    function openCopyFallbackModal(text, title) {
+      document.getElementById("copy-modal-title").textContent = title;
+      const ta = document.getElementById("copy-modal-text");
+      ta.value = text;
+      document.getElementById("copy-modal").classList.remove("hidden");
+      setTimeout(() => {
+        ta.focus();
+        ta.select();
+      }, 50);
+    }
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          appState = Object.assign(appState, parsed);
+        }
+      } catch (e) {
+        console.warn("Could not load from localStorage", e);
+      }
+
+      if (!appState.classList || appState.classList.length === 0) {
+        appState.classList = [...default11Classes];
+      }
+
+      appState.classList.forEach(cls => {
+        if (!appState.classData[cls]) {
+          appState.classData[cls] = {
+            c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0,
+            note: "",
+            filled: false,
+            updatedAt: null
+          };
+        }
+      });
+
+      if (!appState.selectedClass || !appState.classList.includes(appState.selectedClass)) {
+        appState.selectedClass = appState.classList[0] || "401";
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.warn("Could not save to localStorage", e);
+      }
+    }
+
+    function calculateSummary() {
+      let sum100 = 0, sum90 = 0, sum80 = 0, sum70 = 0, sum60 = 0, sumBelow60 = 0;
+      let filledClasses = 0;
+
+      appState.classList.forEach(cls => {
+        const d = appState.classData[cls];
+        if (d && d.filled) {
+          filledClasses++;
+          sum100 += Number(d.c100 || 0);
+          sum90 += Number(d.c90 || 0);
+          sum80 += Number(d.c80 || 0);
+          sum70 += Number(d.c70 || 0);
+          sum60 += Number(d.c60 || 0);
+          sumBelow60 += Number(d.cBelow60 || 0);
+        }
+      });
+
+      const totalCount = sum100 + sum90 + sum80 + sum70 + sum60 + sumBelow60;
+      const calcRatio = (cnt) => {
+        if (totalCount === 0) return "0.0";
+        return ((cnt / totalCount) * 100).toFixed(1);
+      };
+
+      return {
+        filledClasses,
+        totalClasses: appState.classList.length,
+        isAllFilled: filledClasses === appState.classList.length && appState.classList.length > 0,
+        sum100, sum90, sum80, sum70, sum60, sumBelow60,
+        totalCount,
+        ratio100: calcRatio(sum100),
+        ratio90: calcRatio(sum90),
+        ratio80: calcRatio(sum80),
+        ratio70: calcRatio(sum70),
+        ratio60: calcRatio(sum60),
+        ratioBelow60: calcRatio(sumBelow60)
+      };
+    }
+
+    function renderApp() {
+      const summary = calculateSummary();
+
+      document.getElementById("top-school-subtitle").textContent = `${appState.school} ${appState.year}學年第${appState.semester}學期 ${appState.subject}科`;
+
+      document.getElementById("info-school").value = appState.school;
+      document.getElementById("info-year").value = appState.year;
+      document.getElementById("info-semester").value = appState.semester;
+      document.getElementById("info-subject").value = appState.subject;
+      document.getElementById("info-exam-period").value = appState.examPeriod;
+      document.getElementById("info-teacher").value = appState.teacher;
+      document.getElementById("info-version").value = appState.version;
+      document.getElementById("info-grade-label").value = appState.gradeLabel;
+
+      const selector = document.getElementById("current-class-selector");
+      selector.innerHTML = "";
+      appState.classList.forEach(cls => {
+        const opt = document.createElement("option");
+        opt.value = cls;
+        const d = appState.classData[cls];
+        const statusText = d && d.filled ? "✓已填" : "待填";
+        opt.textContent = `${cls} 班 (${statusText})`;
+        if (cls === appState.selectedClass) opt.selected = true;
+        selector.appendChild(opt);
+      });
+
+      const pct = summary.totalClasses > 0 ? Math.round((summary.filledClasses / summary.totalClasses) * 100) : 0;
+      document.getElementById("progress-percent").textContent = `${pct}%`;
+      document.getElementById("progress-bar").style.width = `${pct}%`;
+      document.getElementById("submitted-count").textContent = summary.filledClasses;
+      document.getElementById("total-class-count").textContent = summary.totalClasses;
+
+      const statusBadge = document.getElementById("status-badge");
+      if (summary.isAllFilled) {
+        statusBadge.className = "px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+        statusBadge.textContent = "🎉 11班全數完成填報";
+      } else {
+        statusBadge.className = "px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300";
+        statusBadge.textContent = `填報中 (尚餘 ${summary.totalClasses - summary.filledClasses} 班)`;
+      }
+
+      const badgesContainer = document.getElementById("class-badges-container");
+      badgesContainer.innerHTML = "";
+      appState.classList.forEach(cls => {
+        const d = appState.classData[cls];
+        const isFilled = d && d.filled;
+        const isSelected = cls === appState.selectedClass;
+
+        const badge = document.createElement("button");
+        badge.type = "button";
+        let baseClass = "text-xs px-2.5 py-1 rounded-md font-semibold shrink-0 border transition ";
+        if (isSelected) {
+          baseClass += "ring-2 ring-indigo-500 shadow-xs ";
+        }
+        if (isFilled) {
+          baseClass += "bg-emerald-50 text-emerald-800 border-emerald-300";
+        } else {
+          baseClass += "bg-slate-100 text-slate-500 border-slate-300";
+        }
+        badge.className = baseClass;
+        badge.innerHTML = `${cls}班 <span class="text-[10px]">${isFilled ? "✓" : "未"}</span>`;
+        badge.addEventListener("click", () => {
+          appState.selectedClass = cls;
+          renderApp();
+          switchTab("tab-input");
+        });
+        badgesContainer.appendChild(badge);
+      });
+
+      const curr = appState.classData[appState.selectedClass] || {
+        c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false
+      };
+      document.getElementById("input-score-100").value = curr.c100 || 0;
+      document.getElementById("input-score-90").value = curr.c90 || 0;
+      document.getElementById("input-score-80").value = curr.c80 || 0;
+      document.getElementById("input-score-70").value = curr.c70 || 0;
+      document.getElementById("input-score-60").value = curr.c60 || 0;
+      document.getElementById("input-score-below60").value = curr.cBelow60 || 0;
+      document.getElementById("input-class-note").value = curr.note || "";
+
+      const cTotal = Number(curr.c100 || 0) + Number(curr.c90 || 0) + Number(curr.c80 || 0) + Number(curr.c70 || 0) + Number(curr.c60 || 0) + Number(curr.cBelow60 || 0);
+      const cHigh = Number(curr.c100 || 0) + Number(curr.c90 || 0);
+      const cPass = cTotal - Number(curr.cBelow60 || 0);
+      const cRemedial = Number(curr.cBelow60 || 0);
+
+      document.getElementById("stat-class-total").textContent = `${cTotal} 人`;
+      document.getElementById("stat-class-high").textContent = `${cHigh} 人 (${cTotal > 0 ? ((cHigh / cTotal) * 100).toFixed(1) : 0}%)`;
+      document.getElementById("stat-class-pass").textContent = `${cPass} 人 (${cTotal > 0 ? ((cPass / cTotal) * 100).toFixed(1) : 0}%)`;
+      document.getElementById("stat-class-remedial").textContent = `${cRemedial} 人 (${cTotal > 0 ? ((cRemedial / cTotal) * 100).toFixed(1) : 0}%)`;
+
+      const classStatusBadge = document.getElementById("class-status-badge");
+      if (curr.filled) {
+        classStatusBadge.className = "px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800";
+        classStatusBadge.textContent = "已儲存填報";
+      } else {
+        classStatusBadge.className = "px-2 py-0.5 rounded text-[11px] font-bold bg-slate-200 text-slate-600";
+        classStatusBadge.textContent = "未填報";
+      }
+
+      document.getElementById("sum-count-100").textContent = summary.sum100;
+      document.getElementById("sum-ratio-100").textContent = summary.ratio100;
+      document.getElementById("sum-count-90").textContent = summary.sum90;
+      document.getElementById("sum-ratio-90").textContent = summary.ratio90;
+      document.getElementById("sum-count-80").textContent = summary.sum80;
+      document.getElementById("sum-ratio-80").textContent = summary.ratio80;
+      document.getElementById("sum-count-70").textContent = summary.sum70;
+      document.getElementById("sum-ratio-70").textContent = summary.ratio70;
+      document.getElementById("sum-count-60").textContent = summary.sum60;
+      document.getElementById("sum-ratio-60").textContent = summary.ratio60;
+      document.getElementById("sum-count-below60").textContent = summary.sumBelow60;
+      document.getElementById("sum-ratio-below60").textContent = summary.ratioBelow60;
+      document.getElementById("sum-count-total").textContent = summary.totalCount;
+
+      const breakdownBody = document.getElementById("breakdown-tbody");
+      breakdownBody.innerHTML = "";
+      appState.classList.forEach(cls => {
+        const d = appState.classData[cls] || {};
+        const isF = d.filled;
+        const tot = Number(d.c100 || 0) + Number(d.c90 || 0) + Number(d.c80 || 0) + Number(d.c70 || 0) + Number(d.c60 || 0) + Number(d.cBelow60 || 0);
+        const pass = tot - Number(d.cBelow60 || 0);
+        const pRate = tot > 0 ? ((pass / tot) * 100).toFixed(1) + "%" : "-";
+
+        const tr = document.createElement("tr");
+        tr.className = isF ? "hover:bg-slate-50" : "bg-slate-50/50 text-slate-400";
+        tr.innerHTML = `
+          <td class="border border-slate-200 p-1.5 font-bold">${cls}</td>
+          <td class="border border-slate-200 p-1.5">
+            <span class="px-1 py-0.5 rounded text-[10px] ${isF ? 'bg-emerald-100 text-emerald-700 font-bold' : 'bg-slate-200 text-slate-500'}">
+              ${isF ? '已填' : '未填'}
+            </span>
+          </td>
+          <td class="border border-slate-200 p-1.5">${d.c100 || 0}</td>
+          <td class="border border-slate-200 p-1.5">${d.c90 || 0}</td>
+          <td class="border border-slate-200 p-1.5">${d.c80 || 0}</td>
+          <td class="border border-slate-200 p-1.5">${d.c70 || 0}</td>
+          <td class="border border-slate-200 p-1.5">${d.c60 || 0}</td>
+          <td class="border border-slate-200 p-1.5 text-rose-600 font-semibold">${d.cBelow60 || 0}</td>
+          <td class="border border-slate-200 p-1.5 font-bold">${tot}</td>
+          <td class="border border-slate-200 p-1.5">${pRate}</td>
+          <td class="border border-slate-200 p-1.5 text-left truncate max-w-[120px] text-[10px] text-slate-500">${d.note || '-'}</td>
+        `;
+        breakdownBody.appendChild(tr);
+      });
+
+      renderChart(summary);
+
+      if (!appState.reflection) {
+        generateReflection(false);
+      }
+      document.getElementById("textarea-reflection").value = appState.reflection;
+    }
+
+    function renderChart(summary) {
+      const ctx = document.getElementById("gradeDistributionChart").getContext("2d");
+      const labels = ["100分", "90~99", "80~89", "70~79", "60~69", "<60分"];
+      const data = [
+        summary.sum100,
+        summary.sum90,
+        summary.sum80,
+        summary.sum70,
+        summary.sum60,
+        summary.sumBelow60
+      ];
+
+      if (distributionChart) {
+        distributionChart.data.datasets[0].data = data;
+        distributionChart.update();
+        return;
+      }
+
+      distributionChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: [
+              "rgba(79, 70, 229, 0.85)",
+              "rgba(59, 130, 246, 0.85)",
+              "rgba(20, 184, 166, 0.85)",
+              "rgba(245, 158, 11, 0.85)",
+              "rgba(249, 115, 22, 0.85)",
+              "rgba(244, 63, 94, 0.85)"
+            ],
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            }
+          }
+        }
+      });
+    }
+
+    function generateReflection(triggerToast = true) {
+      const summary = calculateSummary();
+      const subject = appState.subject || "學科";
+      const total = summary.totalCount;
+      const passCount = total - summary.sumBelow60;
+      const passRate = total > 0 ? ((passCount / total) * 100).toFixed(1) : "0.0";
+      const highRate = total > 0 ? (((summary.sum100 + summary.sum90) / total) * 100).toFixed(1) : "0.0";
+      const remedialRate = summary.ratioBelow60;
+
+      let scenario = document.getElementById("select-reflection-scenario").value;
+      if (scenario === "auto") {
+        if (total === 0) scenario = "normal";
+        else if (parseFloat(passRate) < 75.0) scenario = "hard";
+        else if (parseFloat(highRate) > 60.0) scenario = "high";
+        else if (parseFloat(summary.ratioBelow60) > 15.0 && parseFloat(highRate) > 35.0) scenario = "bimodal";
+        else scenario = "normal";
+      }
+
+      let content = "";
+      if (scenario === "high") {
+        content = `一、試題難易度與評量成效分析：
+本次${subject}定期評量全學年整體表現優異，高分群（90分以上）學生佔比達 ${highRate}%，及格率高達 ${passRate}%。試卷基本觀念題型設計清楚合宜，學生普遍對各單元基礎核心知識與重點掌握扎實，學習成就感高。
+
+二、學生答題與迷思弱點診斷：
+部分高分群學生在最後一至二題「高層次情境應用題」或「長文閱讀理解題」出現粗心審題現象；中後段學生則在跨單元整合題型上較缺乏連結能力。
+
+三、教學精進與個別化輔導策略：
+1. 拔尖深化：針對高分群學生，日後課堂可增派「素養導向延伸挑戰單」與高階閱讀探究任務，培養自主思考及批判反思能力。
+2. 鞏固基本：針對極少數待加強學生（佔 ${remedialRate}%），由任課教師與導師合作進行晨光課或課後一對一觀念釐清，落實攜手補救教學。
+
+四、未來定期評量命題改進方向：
+試題難易度可略微提高素養情境題之鑑別度，適度增加開放性與推論題比例，兼顧基礎題與高層次思維題之配分平衡。`;
+      } else if (scenario === "hard") {
+        content = `一、試題難易度與評量成效分析：
+本次${subject}定期評量全學年及格率為 ${passRate}%，60分以下學生佔比為 ${remedialRate}%，整體鑑別度偏高，試題稍偏向中高難度。題型涵蓋甚廣且文字閱讀量較大，中年級學童在時間掌控與長篇題幹理解上呈現挑戰。
+
+二、學生學習困難與常見迷思：
+1. 語意理解受限：題目情境敘述較長時，中年級學童不易迅速抓取核心提問關鍵字。
+2. 基礎觀念未精熟：中後段學生在基礎字詞辨析及情境轉換時常有混淆現象。
+
+三、補救教學與分層輔導對策：
+1. 實施單元重難點小組補救教學，利用圖卡或生活化情境重新架構迷思概念。
+2. 課堂實施差異化教學，對理解較慢學童給予鷹架支撐，重建學習信心。
+
+四、未來定期評量命題改進建議：
+1. 審慎控制試卷整體題量與閱讀文字長度，預留充足作答與檢查時間。
+2. 增加基本概念題之配分權重，確保評量能真正落實檢核學生之基本學力。`;
+      } else if (scenario === "bimodal") {
+        content = `一、試題難易度與成績分佈特徵：
+本次${subject}評量呈現雙峰（M型化）分佈走勢：90分以上優等群達 ${highRate}%，但60分以下待加強群亦達 ${remedialRate}%。試題具備良好鑑別度，但亦凸顯學年學生在學習起點與個別差異上的落差。
+
+二、學生表現兩極化成因探討：
+高分群學生理解敏捷且具備良好自學習慣；低分群學生多因注音國字基礎薄弱或專注力不足，導致未能跟上進度。
+
+三、教學精進與個別化輔導規劃：
+1. 推動課堂「異質分組合作學習」：由同儕擔任小老師協助輔導。
+2. 精準分流補救教學：將不及格學生列入學年學習扶助對象，鎖定核心基本學習內容進行重教重測。
+
+四、命題檢討與後續改進：
+試卷架構應維持階梯式布題，避免難題過於集中在前段造成部分學童挫折放棄。`;
+      } else {
+        content = `一、試題難易度與評量整體表現：
+本次${subject}定期評量全學年成績呈良好常態分佈，全學年及格率達 ${passRate}%，70~89分中堅主力群佔比穩定，展現教學常態落實與合理之評量鑑別度。
+
+二、學生學習狀況與常見錯誤樣態：
+多數學生已完全掌握本學期中年級核心課程指標；普遍失分點多在於「審題不夠周延」之習慣問題，以及需要靈活變通的情境題目。
+
+三、後續教學精進與補強措施：
+1. 加強審題檢查習慣培養，於課堂示範劃記題目關鍵字與自我驗證步驟。
+2. 針對 60 分以下學生（${summary.sumBelow60}人，${remedialRate}%）進行個別診斷，針對特定單元落後提供客製化學習單補強。
+
+四、命題修正與研討建議：
+本次試題命題嚴謹、版面字體適中、題型多元兼顧素養，未來可延續此命題標準。`;
+      }
+
+      appState.reflection = content;
+      document.getElementById("textarea-reflection").value = content;
+      saveState();
+
+      if (triggerToast) {
+        showToast("已依據當前學年數據重新產生教學反思建議！");
+      }
+    }
+
+    // Demo Data: 11 Classes (401 ~ 411)
+    function loadDemo11Classes() {
+      appState.school = "高雄市陽明國小";
+      appState.year = 113;
+      appState.semester = "一";
+      appState.subject = "國語";
+      appState.examPeriod = "一";
+      appState.teacher = "陳美玲 老師";
+      appState.version = "南一版";
+      appState.gradeLabel = "四年級 1~11 班";
+      appState.classList = ["401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411"];
+
+      const demo11 = {
+        "401": { c100: 4, c90: 13, c80: 8, c70: 2, c60: 1, cBelow60: 0, note: "答題認真，書寫工整", filled: true },
+        "402": { c100: 2, c90: 11, c80: 9, c70: 4, c60: 2, cBelow60: 1, note: "有1位資源班抽離施測", filled: true },
+        "403": { c100: 5, c90: 14, c80: 6, c70: 3, c60: 1, cBelow60: 0, note: "高分群比例高，思維敏捷", filled: true },
+        "404": { c100: 3, c90: 10, c80: 10, c70: 3, c60: 2, cBelow60: 1, note: "第4大題字詞辨析稍有混淆", filled: true },
+        "405": { c100: 1, c90: 12, c80: 8, c70: 5, c60: 1, cBelow60: 2, note: "2位不及格學生已安排課後輔導", filled: true },
+        "406": { c100: 4, c90: 15, c80: 5, c70: 2, c60: 1, cBelow60: 0, note: "閱讀測驗理解力佳", filled: true },
+        "407": { c100: 2, c90: 9, c80: 11, c70: 4, c60: 2, cBelow60: 1, note: "長文理解需再加強", filled: true },
+        "408": { c100: 3, c90: 11, c80: 9, c70: 3, c60: 2, cBelow60: 0, note: "平時作業確實，本次表現穩定", filled: true },
+        "409": { c100: 3, c90: 12, c80: 7, c70: 4, c60: 2, cBelow60: 0, note: "造句表達完整流暢", filled: true },
+        "410": { c100: 2, c90: 10, c80: 10, c70: 4, c60: 1, cBelow60: 1, note: "成語題型部分學生較生疏", filled: true },
+        "411": { c100: 4, c90: 13, c80: 8, c70: 2, c60: 1, cBelow60: 0, note: "全體發揮良好，無不及格", filled: true }
+      };
+
+      appState.classData = demo11;
+      appState.selectedClass = "401";
+      saveState();
+      generateReflection(false);
+      renderApp();
+      showToast("⚡ 成功載入四年級 11 個班級示範數據！");
+    }
+
+    function updatePrintModalContent() {
+      const summary = calculateSummary();
+
+      document.getElementById("p-school").textContent = appState.school || "高雄市陽明國小";
+      document.getElementById("p-year").textContent = appState.year || "113";
+      document.getElementById("p-semester").textContent = appState.semester || "一";
+      document.getElementById("p-subject").textContent = appState.subject || "國語";
+      document.getElementById("p-exam-period").textContent = appState.examPeriod || "一";
+
+      document.getElementById("p-info-subject").textContent = appState.subject || "國語";
+      document.getElementById("p-info-grade-label").textContent = appState.gradeLabel || "四年級 1~11 班";
+      document.getElementById("p-info-teacher").textContent = appState.teacher || "命題教師";
+      document.getElementById("p-info-version").textContent = appState.version || "版本";
+
+      document.getElementById("p-count-100").textContent = summary.sum100;
+      document.getElementById("p-ratio-100").textContent = summary.ratio100;
+      document.getElementById("p-count-90").textContent = summary.sum90;
+      document.getElementById("p-ratio-90").textContent = summary.ratio90;
+      document.getElementById("p-count-80").textContent = summary.sum80;
+      document.getElementById("p-ratio-80").textContent = summary.ratio80;
+      document.getElementById("p-count-70").textContent = summary.sum70;
+      document.getElementById("p-ratio-70").textContent = summary.ratio70;
+      document.getElementById("p-count-60").textContent = summary.sum60;
+      document.getElementById("p-ratio-60").textContent = summary.ratio60;
+      document.getElementById("p-count-below60").textContent = summary.sumBelow60;
+      document.getElementById("p-ratio-below60").textContent = summary.ratioBelow60;
+      document.getElementById("p-count-total").textContent = summary.totalCount;
+
+      const reflectionText = document.getElementById("textarea-reflection").value || appState.reflection;
+      document.getElementById("p-reflection-lines").textContent = reflectionText;
+
+      const sigContainer = document.getElementById("p-teacher-signatures");
+      const classNames = appState.classList.map(c => `${c}導師`).join("、");
+      sigContainer.textContent = `（會簽：${classNames}）`;
+    }
+
+    function switchTab(targetId) {
+      document.querySelectorAll(".tab-pane").forEach(pane => {
+        pane.classList.add("hidden");
+      });
+      const targetPane = document.getElementById(targetId);
+      if (targetPane) targetPane.classList.remove("hidden");
+
+      document.querySelectorAll(".nav-tab-btn").forEach(btn => {
+        if (btn.dataset.target === targetId) {
+          btn.className = "nav-tab-btn flex-1 py-1 px-1 rounded text-xs font-bold transition flex items-center justify-center gap-1 text-white bg-indigo-600 shadow-xs border border-indigo-400";
+        } else {
+          btn.className = "nav-tab-btn flex-1 py-1 px-1 rounded text-xs font-semibold transition flex items-center justify-center gap-1 text-indigo-100 hover:text-white hover:bg-indigo-700/60";
+        }
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function setupEventListeners() {
+      // Tab Switching
+      document.querySelectorAll(".nav-tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          switchTab(btn.dataset.target);
+        });
+      });
+
+      // Quick Stepper Buttons (+ / -) for easy mobile tapping
+      document.querySelectorAll(".btn-step-plus").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const input = document.getElementById(btn.dataset.target);
+          if (input) {
+            input.value = Math.max(0, (parseInt(input.value || 0, 10) + 1));
+            input.dispatchEvent(new Event("input"));
+          }
+        });
+      });
+
+      document.querySelectorAll(".btn-step-minus").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const input = document.getElementById(btn.dataset.target);
+          if (input) {
+            input.value = Math.max(0, (parseInt(input.value || 0, 10) - 1));
+            input.dispatchEvent(new Event("input"));
+          }
+        });
+      });
+
+      // Input Focus: Header is not sticky so it scrolls away naturally.
+      // Clear 0 on tap so user doesn't have to backspace.
+      document.querySelectorAll(".score-input, #input-class-note, #info-school, #info-year, #info-subject, #info-exam-period, #info-teacher, #info-version, #info-grade-label, #import-code-area, #textarea-reflection").forEach(input => {
+        input.addEventListener("focus", function() {
+          if (this.classList.contains("score-input") && this.value === "0") {
+            this.value = "";
+          }
+          // Smooth center scroll into view
+          setTimeout(() => {
+            this.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 150);
+        });
+
+        input.addEventListener("blur", function() {
+          if (this.classList.contains("score-input") && this.value === "") {
+            this.value = "0";
+            this.dispatchEvent(new Event("input"));
+          }
+        });
+
+        if (input.classList.contains("score-input")) {
+          input.addEventListener("input", function() {
+            const c100 = parseInt(document.getElementById("input-score-100").value || 0, 10);
+            const c90 = parseInt(document.getElementById("input-score-90").value || 0, 10);
+            const c80 = parseInt(document.getElementById("input-score-80").value || 0, 10);
+            const c70 = parseInt(document.getElementById("input-score-70").value || 0, 10);
+            const c60 = parseInt(document.getElementById("input-score-60").value || 0, 10);
+            const cBelow60 = parseInt(document.getElementById("input-score-below60").value || 0, 10);
+            const total = c100 + c90 + c80 + c70 + c60 + cBelow60;
+            const cHigh = c100 + c90;
+            const pass = total - cBelow60;
+            const pRate = total > 0 ? ((pass / total) * 100).toFixed(1) : 0;
+            const hRate = total > 0 ? ((cHigh / total) * 100).toFixed(1) : 0;
+            const rRate = total > 0 ? ((cBelow60 / total) * 100).toFixed(1) : 0;
+
+            document.getElementById("stat-class-total").textContent = `${total} 人`;
+            document.getElementById("stat-class-high").textContent = `${cHigh} 人 (${hRate}%)`;
+            document.getElementById("stat-class-pass").textContent = `${pass} 人 (${pRate}%)`;
+            document.getElementById("stat-class-remedial").textContent = `${cBelow60} 人 (${rRate}%)`;
+          });
+        }
+      });
+
+      // Class Switcher
+      document.getElementById("current-class-selector").addEventListener("change", e => {
+        appState.selectedClass = e.target.value;
+        renderApp();
+      });
+
+      // Save Class
+      document.getElementById("btn-save-class").addEventListener("click", () => {
+        const cId = appState.selectedClass;
+        const c100 = parseInt(document.getElementById("input-score-100").value || 0, 10);
+        const c90 = parseInt(document.getElementById("input-score-90").value || 0, 10);
+        const c80 = parseInt(document.getElementById("input-score-80").value || 0, 10);
+        const c70 = parseInt(document.getElementById("input-score-70").value || 0, 10);
+        const c60 = parseInt(document.getElementById("input-score-60").value || 0, 10);
+        const cBelow60 = parseInt(document.getElementById("input-score-below60").value || 0, 10);
+        const note = document.getElementById("input-class-note").value.trim();
+
+        appState.classData[cId] = {
+          c100, c90, c80, c70, c60, cBelow60,
+          note,
+          filled: true,
+          updatedAt: new Date().toISOString()
+        };
+
+        saveState();
+        renderApp();
+
+        const summary = calculateSummary();
+        if (summary.isAllFilled) {
+          showToast(`🎉 ${cId} 班已儲存！全學年 ${summary.totalClasses} 班已全數收齊！`, "🎉");
+        } else {
+          showToast(`已儲存 ${cId} 班數據，學年總表已同步即時加總！`);
+        }
+      });
+
+      // Clear Class
+      document.getElementById("btn-clear-class").addEventListener("click", () => {
+        const cId = appState.selectedClass;
+        appState.classData[cId] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
+        saveState();
+        renderApp();
+        showToast(`已清空 ${cId} 班數據`);
+      });
+
+      // Copy Single Class Code
+      document.getElementById("btn-copy-class-code").addEventListener("click", () => {
+        const cId = appState.selectedClass;
+        const d = appState.classData[cId];
+        if (!d || !d.filled) {
+          showToast("請先點擊「儲存」填報本班數據後再複製代碼！", "⚠️");
+          return;
+        }
+        const codePayload = {
+          class: cId,
+          subject: appState.subject,
+          c100: d.c100,
+          c90: d.c90,
+          c80: d.c80,
+          c70: d.c70,
+          c60: d.c60,
+          cBelow60: d.cBelow60,
+          note: d.note || ""
+        };
+        const compactCode = `[GRADE_DATA]:${btoa(encodeURIComponent(JSON.stringify(codePayload)))}`;
+        safeCopy(compactCode, `已複製 ${cId} 班級代碼 (可直接貼到學年 LINE 群)：`);
+      });
+
+      // Copy LINE Force External Browser URL
+      document.getElementById("btn-copy-line-url").addEventListener("click", () => {
+        let currentUrl = window.location.href.split("?")[0];
+        if (currentUrl.includes("about:blank") || currentUrl.startsWith("blob:")) {
+          currentUrl = "https://your-school-domain.edu.tw/analyzer.html";
+        }
+        const lineTarget = `${currentUrl}?openExternalBrowser=1`;
+        safeCopy(lineTarget, "LINE 強制外開瀏覽器分享連結：");
+      });
+
+      // Settings inputs
+      document.getElementById("info-school").addEventListener("input", e => { appState.school = e.target.value; saveState(); });
+      document.getElementById("info-year").addEventListener("input", e => { appState.year = e.target.value; saveState(); });
+      document.getElementById("info-semester").addEventListener("change", e => { appState.semester = e.target.value; saveState(); });
+      document.getElementById("info-subject").addEventListener("input", e => { appState.subject = e.target.value; saveState(); });
+      document.getElementById("info-exam-period").addEventListener("input", e => { appState.examPeriod = e.target.value; saveState(); });
+      document.getElementById("info-teacher").addEventListener("input", e => { appState.teacher = e.target.value; saveState(); });
+      document.getElementById("info-version").addEventListener("input", e => { appState.version = e.target.value; saveState(); });
+      document.getElementById("info-grade-label").addEventListener("input", e => { appState.gradeLabel = e.target.value; saveState(); });
+
+      // Total Classes Select
+      document.getElementById("select-total-classes").addEventListener("change", e => {
+        const val = e.target.value;
+        const customBox = document.getElementById("custom-classes-box");
+        if (val === "custom") {
+          customBox.classList.remove("hidden");
+        } else {
+          customBox.classList.add("hidden");
+        }
+      });
+
+      // Apply Classes
+      document.getElementById("btn-apply-classes").addEventListener("click", () => {
+        const selVal = document.getElementById("select-total-classes").value;
+        let newList = [];
+        if (selVal === "11") {
+          newList = ["401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411"];
+          appState.gradeLabel = "四年級 1~11 班";
+        } else if (selVal === "11-g3") {
+          newList = ["301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311"];
+          appState.gradeLabel = "三年級 1~11 班";
+        } else if (selVal === "custom") {
+          const raw = document.getElementById("input-custom-classes").value.trim();
+          if (raw) {
+            newList = raw.split(/[,，\s]+/).filter(x => x.length > 0);
+          }
+        } else {
+          const count = parseInt(selVal, 10);
+          newList = [];
+          for (let i = 1; i <= count; i++) {
+            newList.push(`40${i < 10 ? i : i}`);
+          }
+          appState.gradeLabel = `四年級 1~${count} 班`;
+        }
+
+        if (newList.length > 0) {
+          appState.classList = newList;
+          newList.forEach(c => {
+            if (!appState.classData[c]) {
+              appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
+            }
+          });
+          if (!appState.classList.includes(appState.selectedClass)) {
+            appState.selectedClass = appState.classList[0];
+          }
+          saveState();
+          renderApp();
+          showToast(`已成功套用學年班級清單（共 ${newList.length} 班）！`);
+        }
+      });
+
+      // Toggle Detailed Breakdown Table
+      document.getElementById("btn-toggle-view").addEventListener("click", () => {
+        const container = document.getElementById("breakdown-container");
+        const btn = document.getElementById("btn-toggle-view");
+        if (container.classList.contains("hidden")) {
+          container.classList.remove("hidden");
+          btn.textContent = "隱藏各班細節對照表";
+        } else {
+          container.classList.add("hidden");
+          btn.textContent = "切換「各班橫向細節對照表」";
+        }
+      });
+
+      // Share Modal Popup
+      document.getElementById("btn-share-code").addEventListener("click", () => {
+        document.getElementById("share-modal").classList.remove("hidden");
+      });
+      document.getElementById("btn-close-share").addEventListener("click", () => {
+        document.getElementById("share-modal").classList.add("hidden");
+      });
+
+      // Import Line Code Helper
+      const handleImportCode = (raw) => {
+        if (!raw) {
+          showToast("請先貼上代碼！", "⚠️");
+          return;
+        }
+        try {
+          let jsonStr = "";
+          if (raw.includes("[GRADE_DATA]:")) {
+            const b64 = raw.split("[GRADE_DATA]:")[1].trim();
+            jsonStr = decodeURIComponent(atob(b64));
+          } else if (raw.startsWith("{") && raw.endsWith("}")) {
+            jsonStr = raw;
+          } else {
+            throw new Error("無效的代碼格式");
+          }
+
+          const parsed = JSON.parse(jsonStr);
+          if (!parsed.class) throw new Error("缺少班級代碼");
+
+          const cId = String(parsed.class);
+          if (!appState.classList.includes(cId)) {
+            appState.classList.push(cId);
+          }
+
+          appState.classData[cId] = {
+            c100: Number(parsed.c100 || 0),
+            c90: Number(parsed.c90 || 0),
+            c80: Number(parsed.c80 || 0),
+            c70: Number(parsed.c70 || 0),
+            c60: Number(parsed.c60 || 0),
+            cBelow60: Number(parsed.cBelow60 || 0),
+            note: parsed.note || "",
+            filled: true,
+            updatedAt: new Date().toISOString()
+          };
+
+          appState.selectedClass = cId;
+          saveState();
+          renderApp();
+          showToast(`成功匯入 ${cId} 班成績數據並已即時加總！`, "🎉");
+        } catch (err) {
+          showToast("代碼解析失敗，請確認代碼格式！", "❌");
+        }
+      };
+
+      document.getElementById("btn-do-import").addEventListener("click", () => {
+        const raw = document.getElementById("import-code-area").value.trim();
+        handleImportCode(raw);
+        document.getElementById("import-code-area").value = "";
+      });
+
+      document.getElementById("btn-modal-do-import").addEventListener("click", () => {
+        const raw = document.getElementById("modal-import-code-area").value.trim();
+        handleImportCode(raw);
+        document.getElementById("modal-import-code-area").value = "";
+        document.getElementById("share-modal").classList.add("hidden");
+      });
+
+      // Export JSON
+      document.getElementById("btn-copy-all-export").addEventListener("click", () => {
+        const fullBackup = JSON.stringify(appState, null, 2);
+        safeCopy(fullBackup, "全學年完整備份 JSON 資料：");
+      });
+
+      // Reflection
+      document.getElementById("btn-generate-reflection").addEventListener("click", () => {
+        generateReflection(true);
+      });
+      document.getElementById("textarea-reflection").addEventListener("input", e => {
+        appState.reflection = e.target.value;
+        saveState();
+      });
+      document.getElementById("btn-insert-sample").addEventListener("click", () => {
+        const snippet = `\n\n【中年級段考後續補強叮嚀】：\n1. 請各班將 60 分以下學童列冊，進行個別弱點章節診斷測驗。\n2. 於下週二前由各班任課教師回傳「差異化學習輔導紀錄表」。`;
+        const ta = document.getElementById("textarea-reflection");
+        ta.value += snippet;
+        appState.reflection = ta.value;
+        saveState();
+        showToast("已加入後續補強叮嚀文字！");
+      });
+      document.getElementById("btn-copy-reflection").addEventListener("click", () => {
+        const text = document.getElementById("textarea-reflection").value;
+        safeCopy(text, "反思修正文字：");
+      });
+
+      // Copy Modal controls
+      document.getElementById("btn-close-copy-modal").addEventListener("click", () => {
+        document.getElementById("copy-modal").classList.add("hidden");
+      });
+      document.getElementById("btn-select-copy-modal").addEventListener("click", () => {
+        const ta = document.getElementById("copy-modal-text");
+        ta.focus();
+        ta.select();
+        showToast("文字已全選，可直接按複製！");
+      });
+
+      // Demo & Reset
+      document.getElementById("btn-load-demo").addEventListener("click", loadDemo11Classes);
+      document.getElementById("btn-reset-all").addEventListener("click", () => {
+        appState.classList = ["401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411"];
+        appState.gradeLabel = "四年級 1~11 班";
+        appState.classData = {};
+        appState.reflection = "";
+        appState.selectedClass = "401";
+        appState.classList.forEach(c => {
+          appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
+        });
+        saveState();
+        generateReflection(false);
+        renderApp();
+        showToast("已重設為 11 個班級空白填報狀態。");
+      });
+
+      // Print Preview Modal
+      const openPrintModal = () => {
+        updatePrintModalContent();
+        document.getElementById("print-modal").classList.remove("hidden");
+      };
+      document.getElementById("btn-preview-print").addEventListener("click", openPrintModal);
+      document.getElementById("btn-settings-preview-print").addEventListener("click", openPrintModal);
+      document.getElementById("btn-close-modal").addEventListener("click", () => {
+        document.getElementById("print-modal").classList.add("hidden");
+      });
+      document.getElementById("btn-trigger-print").addEventListener("click", () => {
+        window.print();
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      loadState();
+      setupEventListeners();
+      renderApp();
+    });
+  </script>
+</body>
+</html>
