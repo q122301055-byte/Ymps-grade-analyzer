@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>國小學年評量結果分析表系統 (手機行動優化版)</title>
+  <title>國小學年評量結果分析表系統 (全校通用彈性版)</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <!-- Chart.js -->
@@ -61,14 +61,17 @@
         <span class="text-lg">📊</span>
         <div>
           <h1 class="text-xs sm:text-sm font-bold tracking-wide flex items-center gap-1">
-            <span>評量結果分析表系統</span>
-            <span class="text-[9px] bg-indigo-500 px-1 py-0.5 rounded font-normal">手機版</span>
+            <span id="header-school-name">國小評量結果分析表</span>
+            <span class="text-[9px] bg-indigo-500 px-1 py-0.5 rounded font-normal">全校通用版</span>
           </h1>
-          <p class="text-[10px] text-indigo-200" id="top-school-subtitle">高雄市陽明國小 113學年</p>
+          <p class="text-[10px] text-indigo-200" id="top-school-subtitle">高雄市陽明國小 113學年 第一學期 國語科</p>
         </div>
       </div>
       <div class="flex items-center gap-1">
-        <button id="btn-load-demo" class="px-2 py-1 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-[11px] sm:text-xs font-semibold rounded shadow-xs transition" title="載入11班示範資料">
+        <button id="btn-quick-config" class="px-2 py-1 bg-indigo-500 hover:bg-indigo-400 text-white text-[11px] sm:text-xs font-semibold rounded shadow-xs transition flex items-center gap-0.5" title="快速修改年級/班級數/科目/表頭">
+          <span>✏️ 修改表頭</span>
+        </button>
+        <button id="btn-load-demo" class="px-2 py-1 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-[11px] sm:text-xs font-semibold rounded shadow-xs transition" title="載入示範資料">
           ⚡ 載入示範數據 (3年級8班)
         </button>
         <button id="btn-preview-print" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-semibold rounded shadow-xs transition" title="產生A4公文表">
@@ -110,14 +113,19 @@
           <span id="status-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
             填報進行中
           </span>
-          <span class="text-xs font-bold text-slate-700">學年 11 班填報進度：</span>
-          <span class="text-xs font-bold text-indigo-700"><span id="submitted-count">0</span> / <span id="total-class-count">11</span> 班</span>
+          <span class="text-xs font-bold text-slate-700"><span id="display-grade-prefix">學年</span> 填報進度：</span>
+          <span class="text-xs font-bold text-indigo-700"><span id="submitted-count">0</span> / <span id="total-class-count">8</span> 班</span>
         </div>
-        <div class="text-xs font-bold text-indigo-600" id="progress-percent">0%</div>
+        <div class="flex items-center gap-2">
+          <button id="btn-open-grade-modal" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline">
+            切換年級/班數
+          </button>
+          <div class="text-xs font-bold text-indigo-600" id="progress-percent">0%</div>
+        </div>
       </div>
       
       <p id="status-desc" class="text-[11px] text-slate-500 mb-2">
-        已設定學年 11 個班級（401~411），表頭完全不釘頂，鍵盤彈起時絕不遮擋輸入格。
+        支援全校各年級自由切換，可自訂班級數、科目、學期與所有表頭，各班非同步填報自動加總。
       </p>
 
       <!-- Progress Line -->
@@ -331,7 +339,7 @@
           </div>
         </div>
 
-        <!-- 11 Classes Breakdown Matrix -->
+        <!-- Breakdown Matrix -->
         <div id="breakdown-container">
           <h4 class="font-bold text-slate-700 text-xs sm:text-sm mb-2">全學年各班數據明細（橫向對照）</h4>
           <div class="overflow-x-auto">
@@ -368,7 +376,7 @@
             <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
               <span>💡</span> ◆ 反思修正 (專業診斷建議)
             </h3>
-            <p class="text-[11px] text-slate-500">依據學年 11 班加總成效，自動生成具備教育專業度之教學檢討與命題修正</p>
+            <p class="text-[11px] text-slate-500">依據各班加總成效，自動生成具備教育專業度之教學檢討與命題修正</p>
           </div>
           <div class="flex items-center gap-2">
             <select id="select-reflection-scenario" class="text-xs px-2 py-1.5 border border-slate-300 rounded bg-slate-50 text-slate-700">
@@ -401,7 +409,7 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 4: 設定與協作 (公文表頭、11班管理、LINE代碼與外開連結) ==================== -->
+    <!-- ==================== TAB 4: 設定與協作 (全校各年級、各學期、各科目彈性配置) ==================== -->
     <section id="tab-settings" class="tab-pane hidden space-y-4">
       
       <!-- LINE Force External Browser Banner -->
@@ -420,16 +428,19 @@
         </button>
       </div>
 
-      <!-- Section A: Official Paper Header Info -->
+      <!-- Section A: Official Paper Header Info (Fully Customizable for ANY school, grade, subject) -->
       <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
-        <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5 pb-2 border-b border-slate-100">
-          <span>⚙️</span> 評量表基本設定 (對應紙本表頭)
-        </h3>
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
+            <span>⚙️</span> 評量表基本設定 (支援全校任何年級與學校)
+          </h3>
+          <span class="text-[11px] text-indigo-600 font-semibold">隨改即生效</span>
+        </div>
 
-        <div class="space-y-2.5 text-xs sm:text-sm">
+        <div class="space-y-3 text-xs sm:text-sm">
           <div>
-            <label class="block text-slate-600 font-medium mb-1">學校全稱</label>
-            <input type="text" id="info-school" value="高雄市陽明國小" class="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+            <label class="block text-slate-600 font-medium mb-1">學校全稱（任何國小皆可使用）</label>
+            <input type="text" id="info-school" value="高雄市陽明國小" placeholder="例如：高雄市陽明國小、臺北市建安國小..." class="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -449,54 +460,132 @@
             </div>
           </div>
 
+          <!-- Grade & Class Quick Generator (Solves why it was Grade 4 & empowers all grades) -->
+          <div class="bg-indigo-50/70 p-3 rounded-lg border border-indigo-100 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-indigo-900 text-xs">🎓 選擇適用年級與班級數（自動重組班級清單）：</span>
+              <span class="text-[10px] text-indigo-600">一鍵生成 301~308 或 401~411 等</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-slate-600 text-[11px] mb-1">年級選擇：</label>
+                <select id="cfg-select-grade" class="w-full px-2.5 py-1.5 border border-indigo-300 rounded bg-white text-xs font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500">
+                  <option value="1">一年級 (101~)</option>
+                  <option value="2">二年級 (201~)</option>
+                  <option value="3" selected>三年級 (301~)</option>
+                  <option value="4">四年級 (401~)</option>
+                  <option value="5">五年級 (501~)</option>
+                  <option value="6">六年級 (601~)</option>
+                  <option value="custom">自訂年級...</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-600 text-[11px] mb-1">學年總班數：</label>
+                <select id="cfg-select-class-count" class="w-full px-2.5 py-1.5 border border-indigo-300 rounded bg-white text-xs font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500">
+                  <option value="1">1 個班</option>
+                  <option value="2">2 個班</option>
+                  <option value="3">3 個班</option>
+                  <option value="4">4 個班</option>
+                  <option value="5">5 個班</option>
+                  <option value="6">6 個班</option>
+                  <option value="7">7 個班</option>
+                  <option value="8" selected>8 個班 (中年級常見)</option>
+                  <option value="9">9 個班</option>
+                  <option value="10">10 個班</option>
+                  <option value="11">11 個班 (大校常見)</option>
+                  <option value="12">12 個班</option>
+                  <option value="13">13 個班</option>
+                  <option value="14">14 個班</option>
+                  <option value="15">15 個班</option>
+                  <option value="custom">自訂班數...</option>
+                </select>
+              </div>
+            </div>
+            <button id="btn-apply-generator" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded shadow-xs transition">
+              ⚡ 套用年級與班數設定 (自動重置班級名冊)
+            </button>
+          </div>
+
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-slate-600 font-medium mb-1">科目名稱</label>
-              <input type="text" id="info-subject" value="國語" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+              <div class="flex gap-1">
+                <input type="text" id="info-subject" value="國語" placeholder="國語/數學/英語..." class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+                <select id="quick-subject-select" class="px-1.5 py-1 border border-slate-300 rounded text-xs bg-slate-50 text-slate-600 shrink-0" title="常用科目選單">
+                  <option value="">快速選科</option>
+                  <option value="國語">國語</option>
+                  <option value="數學">數學</option>
+                  <option value="英語">英語</option>
+                  <option value="自然">自然</option>
+                  <option value="社會">社會</option>
+                  <option value="生活">生活</option>
+                  <option value="本土語">本土語</option>
+                </select>
+              </div>
             </div>
             <div>
               <label class="block text-slate-600 font-medium mb-1">評量期別</label>
-              <input type="text" id="info-exam-period" value="一" placeholder="一 / 二 / 期中" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+              <div class="flex gap-1">
+                <input type="text" id="info-exam-period" value="一" placeholder="一 / 二 / 期中" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+                <select id="quick-period-select" class="px-1.5 py-1 border border-slate-300 rounded text-xs bg-slate-50 text-slate-600 shrink-0" title="常用期別選單">
+                  <option value="">快速期別</option>
+                  <option value="一">第一次定期評量</option>
+                  <option value="二">第二次定期評量</option>
+                  <option value="期中">期中評量</option>
+                  <option value="期末">期末評量</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-slate-600 font-medium mb-1">命題教師</label>
-              <input type="text" id="info-teacher" value="陳美玲 老師" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+              <input type="text" id="info-teacher" value="陳美玲 老師" placeholder="填寫命題教師姓名" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
             </div>
             <div>
               <label class="block text-slate-600 font-medium mb-1">版本</label>
-              <input type="text" id="info-version" value="南一版" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+              <div class="flex gap-1">
+                <input type="text" id="info-version" value="南一版" placeholder="南一/康軒/翰林..." class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+                <select id="quick-version-select" class="px-1.5 py-1 border border-slate-300 rounded text-xs bg-slate-50 text-slate-600 shrink-0">
+                  <option value="">選版本</option>
+                  <option value="南一版">南一版</option>
+                  <option value="康軒版">康軒版</option>
+                  <option value="翰林版">翰林版</option>
+                  <option value="真平版">真平版</option>
+                  <option value="自編版">自編版</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div>
-            <label class="block text-slate-600 font-medium mb-1">使用年級班別（表頭顯示）</label>
-            <input type="text" id="info-grade-label" value="四年級 1~11 班" class="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+            <label class="block text-slate-600 font-medium mb-1">使用年級班別（公文表頭印製）</label>
+            <input type="text" id="info-grade-label" value="三年級 1~8 班" placeholder="例如：三年級 1~8 班、四年級 1~11 班..." class="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
           </div>
         </div>
       </div>
 
-      <!-- Section B: 11 Classes Configuration -->
+      <!-- Section B: Advanced Total Classes Configuration -->
       <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
         <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center justify-between pb-2 border-b border-slate-100">
-          <span>🏫 學年總班級管理 (預設 11 個班)</span>
-          <span class="text-xs text-indigo-600 font-normal">已設定 401~411</span>
+          <span>🏫 自訂班級代號名冊</span>
+          <span class="text-xs text-indigo-600 font-normal">可隨時自由更名</span>
         </h3>
 
         <div class="space-y-2 text-xs sm:text-sm">
           <p class="text-slate-500 text-xs">
-            系統目前已為您預設好 <strong>11 個班級</strong>（401 ～ 411 班）。若需要調整或自訂，可在下方直接變更並按套用：
+            若學校習慣使用「三年一班、三年二班」或「三忠、三孝」，也可選擇自訂班級清單直接填寫：
           </p>
 
           <div class="flex items-center gap-2">
             <select id="select-total-classes" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm">
-              <option value="11" selected>11 個班 (401~411 班 - 預設)</option>
-              <option value="11-g3">11 個班 (301~311 班)</option>
-              <option value="8">8 個班 (401~408 班)</option>
-              <option value="10">10 個班 (401~410 班)</option>
-              <option value="12">12 個班 (401~412 班)</option>
+              <option value="8" selected>8 個班 (當前年級 01~08)</option>
+              <option value="11">11 個班 (當前年級 01~11)</option>
+              <option value="4">4 個班 (當前年級 01~04)</option>
+              <option value="6">6 個班 (當前年級 01~06)</option>
+              <option value="10">10 個班 (當前年級 01~10)</option>
+              <option value="12">12 個班 (當前年級 01~12)</option>
               <option value="custom">自訂班級清單...</option>
             </select>
             <button id="btn-apply-classes" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs rounded-md shrink-0">
@@ -505,7 +594,7 @@
           </div>
 
           <div id="custom-classes-box" class="hidden">
-            <input type="text" id="input-custom-classes" placeholder="用逗號隔開，例如：401, 402, 403, 404, 405...411" class="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs">
+            <input type="text" id="input-custom-classes" placeholder="用逗號隔開，例如：301, 302, 303 或 三年一班, 三年二班" class="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs">
           </div>
         </div>
       </div>
@@ -525,7 +614,7 @@
           <p class="text-slate-600 leading-relaxed">
             各班老師在手機上輸入完成後按「複製單班代碼」，學年召集人在下方貼上老師回傳的代碼，點擊「匯入」，系統立即合併該班：
           </p>
-          <textarea id="import-code-area" rows="3" placeholder="貼上老師在 LINE 群傳來的代碼 (例如：[GRADE_DATA]:eyJjbGFzcyI6IjQwMSI...)" class="w-full p-2 border border-slate-300 rounded-md font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+          <textarea id="import-code-area" rows="3" placeholder="貼上老師在 LINE 群傳來的代碼 (例如：[GRADE_DATA]:eyJjbGFzcyI6IjMwMSI...)" class="w-full p-2 border border-slate-300 rounded-md font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
           <div class="flex gap-2">
             <button id="btn-do-import" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-md transition">
               📥 解析並匯入此班成績
@@ -549,7 +638,7 @@
     </section>
   </main>
 
-  <!-- Modal: Print / Official Form Preview (Exact Photo Reproduction for 11 Classes) -->
+  <!-- Modal: Print / Official Form Preview (Exact Photo Reproduction for All Grades) -->
   <div id="print-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto no-print">
     <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden">
       <!-- Modal Bar -->
@@ -593,7 +682,7 @@
                   <td class="border border-black py-2 px-2 font-semibold bg-slate-50 w-24">科目名稱</td>
                   <td id="p-info-subject" class="border border-black py-2 px-2 text-left">國語</td>
                   <td class="border border-black py-2 px-2 font-semibold bg-slate-50 w-28">使用年級班別</td>
-                  <td id="p-info-grade-label" class="border border-black py-2 px-2 text-left">四年級 1~11 班</td>
+                  <td id="p-info-grade-label" class="border border-black py-2 px-2 text-left">三年級 1~8 班</td>
                 </tr>
                 <tr>
                   <td class="border border-black py-2 px-2 font-semibold bg-slate-50">命題教師</td>
@@ -672,7 +761,7 @@
           <div class="pt-4 border-t border-dashed border-slate-300">
             <div class="mb-8 text-[12px]">
               <span class="font-bold">學年教師簽章：</span>
-              <span id="p-teacher-signatures" class="text-slate-500 text-[11px] ml-1">（401~411 各班級任導師會簽）</span>
+              <span id="p-teacher-signatures" class="text-slate-500 text-[11px] ml-1">（各班級任導師會簽）</span>
             </div>
 
             <div class="grid grid-cols-3 gap-4 text-center text-[12px] font-bold">
@@ -729,8 +818,9 @@
 
   <!-- Application Logic -->
   <script>
-    // State: Default 11 classes (401 ~ 411)
-    const default11Classes = ["401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411"];
+    // Universal defaults
+    const gradeNameMap = { "1": "一年級", "2": "二年級", "3": "三年級", "4": "四年級", "5": "五年級", "6": "六年級" };
+    
     let appState = {
       school: "高雄市陽明國小",
       year: 113,
@@ -739,16 +829,18 @@
       examPeriod: "一",
       teacher: "陳美玲 老師",
       version: "南一版",
-      gradeLabel: "四年級 1~11 班",
-      classList: [...default11Classes],
-      selectedClass: "401",
+      gradeNum: "3", // default 3rd grade
+      gradeLabel: "三年級 1~8 班",
+      classCount: 8,
+      classList: ["301", "302", "303", "304", "305", "306", "307", "308"],
+      selectedClass: "301",
       classData: {},
       reflection: "",
       scenario: "auto"
     };
 
     let distributionChart = null;
-    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_V2_MOBILE";
+    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_UNIVERSAL_V3";
 
     function showToast(msg, icon = "✅") {
       const toast = document.getElementById("toast");
@@ -803,6 +895,21 @@
       }, 50);
     }
 
+    function generateClassList(gNum, count) {
+      const list = [];
+      const c = parseInt(count, 10) || 8;
+      const g = String(gNum);
+      for (let i = 1; i <= c; i++) {
+        if (["1", "2", "3", "4", "5", "6"].includes(g)) {
+          const suffix = i < 10 ? `0${i}` : `${i}`;
+          list.push(`${g}${suffix}`);
+        } else {
+          list.push(`${g ? g : ''}${i}班`);
+        }
+      }
+      return list;
+    }
+
     function loadState() {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -815,7 +922,7 @@
       }
 
       if (!appState.classList || appState.classList.length === 0) {
-        appState.classList = [...default11Classes];
+        appState.classList = generateClassList(appState.gradeNum || "3", appState.classCount || 8);
       }
 
       appState.classList.forEach(cls => {
@@ -830,7 +937,7 @@
       });
 
       if (!appState.selectedClass || !appState.classList.includes(appState.selectedClass)) {
-        appState.selectedClass = appState.classList[0] || "401";
+        appState.selectedClass = appState.classList[0] || "301";
       }
     }
 
@@ -882,9 +989,14 @@
 
     function renderApp() {
       const summary = calculateSummary();
+      const currentGradeName = gradeNameMap[appState.gradeNum] || appState.gradeLabel || "中年級";
 
-      document.getElementById("top-school-subtitle").textContent = `${appState.school} ${appState.year}學年第${appState.semester}學期 ${appState.subject}科`;
+      // Header labels
+      document.getElementById("header-school-name").textContent = appState.school || "國小評量結果分析表";
+      document.getElementById("top-school-subtitle").textContent = `${appState.school} ${appState.year}學年 第${appState.semester}學期 ${appState.gradeLabel} ${appState.subject}科`;
+      document.getElementById("display-grade-prefix").textContent = currentGradeName;
 
+      // Settings Inputs sync
       document.getElementById("info-school").value = appState.school;
       document.getElementById("info-year").value = appState.year;
       document.getElementById("info-semester").value = appState.semester;
@@ -894,6 +1006,20 @@
       document.getElementById("info-version").value = appState.version;
       document.getElementById("info-grade-label").value = appState.gradeLabel;
 
+      if (document.getElementById("cfg-select-grade")) {
+        document.getElementById("cfg-select-grade").value = appState.gradeNum || "3";
+      }
+      if (document.getElementById("cfg-select-class-count")) {
+        const countStr = String(appState.classList.length);
+        const selCount = document.getElementById("cfg-select-class-count");
+        if (selCount.querySelector(`option[value="${countStr}"]`)) {
+          selCount.value = countStr;
+        } else {
+          selCount.value = "custom";
+        }
+      }
+
+      // Class Selector
       const selector = document.getElementById("current-class-selector");
       selector.innerHTML = "";
       appState.classList.forEach(cls => {
@@ -906,6 +1032,7 @@
         selector.appendChild(opt);
       });
 
+      // Progress bar & counts
       const pct = summary.totalClasses > 0 ? Math.round((summary.filledClasses / summary.totalClasses) * 100) : 0;
       document.getElementById("progress-percent").textContent = `${pct}%`;
       document.getElementById("progress-bar").style.width = `${pct}%`;
@@ -915,12 +1042,13 @@
       const statusBadge = document.getElementById("status-badge");
       if (summary.isAllFilled) {
         statusBadge.className = "px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
-        statusBadge.textContent = "🎉 11班全數完成填報";
+        statusBadge.textContent = `🎉 全學年 ${summary.totalClasses} 班全數完成填報`;
       } else {
         statusBadge.className = "px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300";
         statusBadge.textContent = `填報中 (尚餘 ${summary.totalClasses - summary.filledClasses} 班)`;
       }
 
+      // Horizontal quick class picker chips
       const badgesContainer = document.getElementById("class-badges-container");
       badgesContainer.innerHTML = "";
       appState.classList.forEach(cls => {
@@ -949,6 +1077,7 @@
         badgesContainer.appendChild(badge);
       });
 
+      // Current Class Inputs
       const curr = appState.classData[appState.selectedClass] || {
         c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false
       };
@@ -979,6 +1108,7 @@
         classStatusBadge.textContent = "未填報";
       }
 
+      // Summary Table numbers
       document.getElementById("sum-count-100").textContent = summary.sum100;
       document.getElementById("sum-ratio-100").textContent = summary.ratio100;
       document.getElementById("sum-count-90").textContent = summary.sum90;
@@ -993,6 +1123,7 @@
       document.getElementById("sum-ratio-below60").textContent = summary.ratioBelow60;
       document.getElementById("sum-count-total").textContent = summary.totalCount;
 
+      // Breakdown Table
       const breakdownBody = document.getElementById("breakdown-tbody");
       breakdownBody.innerHTML = "";
       appState.classList.forEach(cls => {
@@ -1091,6 +1222,7 @@
       const passRate = total > 0 ? ((passCount / total) * 100).toFixed(1) : "0.0";
       const highRate = total > 0 ? (((summary.sum100 + summary.sum90) / total) * 100).toFixed(1) : "0.0";
       const remedialRate = summary.ratioBelow60;
+      const gradeText = gradeNameMap[appState.gradeNum] || appState.gradeLabel || "學生";
 
       let scenario = document.getElementById("select-reflection-scenario").value;
       if (scenario === "auto") {
@@ -1104,7 +1236,7 @@
       let content = "";
       if (scenario === "high") {
         content = `一、試題難易度與評量成效分析：
-本次${subject}定期評量全學年整體表現優異，高分群（90分以上）學生佔比達 ${highRate}%，及格率高達 ${passRate}%。試卷基本觀念題型設計清楚合宜，學生普遍對各單元基礎核心知識與重點掌握扎實，學習成就感高。
+本次${subject}定期評量全學年整體表現優異，高分群（90分以上）學生佔比達 ${highRate}%，及格率高達 ${passRate}%。試卷基本觀念題型設計清楚合宜，${gradeText}學生普遍對各單元基礎核心知識與重點掌握扎實，學習成就感高。
 
 二、學生答題與迷思弱點診斷：
 部分高分群學生在最後一至二題「高層次情境應用題」或「長文閱讀理解題」出現粗心審題現象；中後段學生則在跨單元整合題型上較缺乏連結能力。
@@ -1117,10 +1249,10 @@
 試題難易度可略微提高素養情境題之鑑別度，適度增加開放性與推論題比例，兼顧基礎題與高層次思維題之配分平衡。`;
       } else if (scenario === "hard") {
         content = `一、試題難易度與評量成效分析：
-本次${subject}定期評量全學年及格率為 ${passRate}%，60分以下學生佔比為 ${remedialRate}%，整體鑑別度偏高，試題稍偏向中高難度。題型涵蓋甚廣且文字閱讀量較大，中年級學童在時間掌控與長篇題幹理解上呈現挑戰。
+本次${subject}定期評量全學年及格率為 ${passRate}%，60分以下學生佔比為 ${remedialRate}%，整體鑑別度偏高，試題稍偏向中高難度。題型涵蓋甚廣且文字閱讀量較大，${gradeText}學童在時間掌控與長篇題幹理解上呈現挑戰。
 
 二、學生學習困難與常見迷思：
-1. 語意理解受限：題目情境敘述較長時，中年級學童不易迅速抓取核心提問關鍵字。
+1. 語意理解受限：題目情境敘述較長時，學童不易迅速抓取核心提問關鍵字。
 2. 基礎觀念未精熟：中後段學生在基礎字詞辨析及情境轉換時常有混淆現象。
 
 三、補救教學與分層輔導對策：
@@ -1132,7 +1264,7 @@
 2. 增加基本概念題之配分權重，確保評量能真正落實檢核學生之基本學力。`;
       } else if (scenario === "bimodal") {
         content = `一、試題難易度與成績分佈特徵：
-本次${subject}評量呈現雙峰（M型化）分佈走勢：90分以上優等群達 ${highRate}%，但60分以下待加強群亦達 ${remedialRate}%。試題具備良好鑑別度，但亦凸顯學年學生在學習起點與個別差異上的落差。
+本次${subject}評量呈現雙峰（M型化）分佈走勢：90分以上優等群達 ${highRate}%，但60分以下待加強群亦達 ${remedialRate}%。試題具備良好鑑別度，但亦凸顯${gradeText}學生在學習起點與個別差異上的落差。
 
 二、學生表現兩極化成因探討：
 高分群學生理解敏捷且具備良好自學習慣；低分群學生多因注音國字基礎薄弱或專注力不足，導致未能跟上進度。
@@ -1148,7 +1280,7 @@
 本次${subject}定期評量全學年成績呈良好常態分佈，全學年及格率達 ${passRate}%，70~89分中堅主力群佔比穩定，展現教學常態落實與合理之評量鑑別度。
 
 二、學生學習狀況與常見錯誤樣態：
-多數學生已完全掌握本學期中年級核心課程指標；普遍失分點多在於「審題不夠周延」之習慣問題，以及需要靈活變通的情境題目。
+多數學生已完全掌握本學期${gradeText}核心課程指標；普遍失分點多在於「審題不夠周延」之習慣問題，以及需要靈活變通的情境題目。
 
 三、後續教學精進與補強措施：
 1. 加強審題檢查習慣培養，於課堂示範劃記題目關鍵字與自我驗證步驟。
@@ -1167,38 +1299,34 @@
       }
     }
 
-    // Demo Data: 11 Classes (401 ~ 411)
-    function loadDemo11Classes() {
-      appState.school = "高雄市陽明國小";
-      appState.year = 113;
-      appState.semester = "一";
-      appState.subject = "國語";
-      appState.examPeriod = "一";
-      appState.teacher = "陳美玲 老師";
-      appState.version = "南一版";
-      appState.gradeLabel = "四年級 1~11 班";
-      appState.classList = ["401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411"];
+    // Dynamic Demo Generator: Supports ANY grade & class count
+    function loadUniversalDemo() {
+      const gNum = appState.gradeNum || "3";
+      const gName = gradeNameMap[gNum] || "中年級";
+      const count = appState.classList.length || 8;
 
-      const demo11 = {
-        "401": { c100: 4, c90: 13, c80: 8, c70: 2, c60: 1, cBelow60: 0, note: "答題認真，書寫工整", filled: true },
-        "402": { c100: 2, c90: 11, c80: 9, c70: 4, c60: 2, cBelow60: 1, note: "有1位資源班抽離施測", filled: true },
-        "403": { c100: 5, c90: 14, c80: 6, c70: 3, c60: 1, cBelow60: 0, note: "高分群比例高，思維敏捷", filled: true },
-        "404": { c100: 3, c90: 10, c80: 10, c70: 3, c60: 2, cBelow60: 1, note: "第4大題字詞辨析稍有混淆", filled: true },
-        "405": { c100: 1, c90: 12, c80: 8, c70: 5, c60: 1, cBelow60: 2, note: "2位不及格學生已安排課後輔導", filled: true },
-        "406": { c100: 4, c90: 15, c80: 5, c70: 2, c60: 1, cBelow60: 0, note: "閱讀測驗理解力佳", filled: true },
-        "407": { c100: 2, c90: 9, c80: 11, c70: 4, c60: 2, cBelow60: 1, note: "長文理解需再加強", filled: true },
-        "408": { c100: 3, c90: 11, c80: 9, c70: 3, c60: 2, cBelow60: 0, note: "平時作業確實，本次表現穩定", filled: true },
-        "409": { c100: 3, c90: 12, c80: 7, c70: 4, c60: 2, cBelow60: 0, note: "造句表達完整流暢", filled: true },
-        "410": { c100: 2, c90: 10, c80: 10, c70: 4, c60: 1, cBelow60: 1, note: "成語題型部分學生較生疏", filled: true },
-        "411": { c100: 4, c90: 13, c80: 8, c70: 2, c60: 1, cBelow60: 0, note: "全體發揮良好，無不及格", filled: true }
-      };
+      appState.classData = {};
+      appState.classList.forEach((cls, idx) => {
+        // Generate realistic distribution
+        const c100 = 2 + (idx % 4);
+        const c90 = 10 + (idx % 6);
+        const c80 = 7 + ((idx * 2) % 5);
+        const c70 = 2 + (idx % 4);
+        const c60 = 1 + (idx % 2);
+        const cBelow60 = (idx % 3 === 0) ? 1 : 0;
+        appState.classData[cls] = {
+          c100, c90, c80, c70, c60, cBelow60,
+          note: idx === 0 ? "答題認真，字跡工整" : idx === 1 ? "閱讀題理解力佳" : "平時作業確實，發揮穩定",
+          filled: true,
+          updatedAt: new Date().toISOString()
+        };
+      });
 
-      appState.classData = demo11;
-      appState.selectedClass = "401";
+      appState.selectedClass = appState.classList[0];
       saveState();
       generateReflection(false);
       renderApp();
-      showToast("⚡ 成功載入四年級 11 個班級示範數據！");
+      showToast(`⚡ 成功載入 ${gName}（共 ${count} 班）完整示範數據！`);
     }
 
     function updatePrintModalContent() {
@@ -1211,7 +1339,7 @@
       document.getElementById("p-exam-period").textContent = appState.examPeriod || "一";
 
       document.getElementById("p-info-subject").textContent = appState.subject || "國語";
-      document.getElementById("p-info-grade-label").textContent = appState.gradeLabel || "四年級 1~11 班";
+      document.getElementById("p-info-grade-label").textContent = appState.gradeLabel || "中年級";
       document.getElementById("p-info-teacher").textContent = appState.teacher || "命題教師";
       document.getElementById("p-info-version").textContent = appState.version || "版本";
 
@@ -1262,6 +1390,69 @@
         });
       });
 
+      // Quick Config Jump Buttons
+      const jumpToSettings = () => {
+        switchTab("tab-settings");
+        setTimeout(() => {
+          document.getElementById("info-school").scrollIntoView({ behavior: "smooth", block: "start" });
+          document.getElementById("info-school").focus();
+        }, 150);
+      };
+      document.getElementById("btn-quick-config").addEventListener("click", jumpToSettings);
+      document.getElementById("btn-open-grade-modal").addEventListener("click", jumpToSettings);
+
+      // Quick Dropdown helpers in settings
+      document.getElementById("quick-subject-select").addEventListener("change", e => {
+        if (e.target.value) {
+          document.getElementById("info-subject").value = e.target.value;
+          appState.subject = e.target.value;
+          saveState();
+          renderApp();
+        }
+      });
+
+      document.getElementById("quick-period-select").addEventListener("change", e => {
+        if (e.target.value) {
+          document.getElementById("info-exam-period").value = e.target.value;
+          appState.examPeriod = e.target.value;
+          saveState();
+          renderApp();
+        }
+      });
+
+      document.getElementById("quick-version-select").addEventListener("change", e => {
+        if (e.target.value) {
+          document.getElementById("info-version").value = e.target.value;
+          appState.version = e.target.value;
+          saveState();
+          renderApp();
+        }
+      });
+
+      // Grade & Class Count Generator Apply
+      document.getElementById("btn-apply-generator").addEventListener("click", () => {
+        const gNum = document.getElementById("cfg-select-grade").value;
+        const countVal = document.getElementById("cfg-select-class-count").value;
+        const cCount = countVal === "custom" ? 8 : parseInt(countVal, 10);
+        
+        appState.gradeNum = gNum;
+        appState.classCount = cCount;
+        const gName = gradeNameMap[gNum] || `${gNum}年級`;
+        appState.gradeLabel = `${gName} 1~${cCount} 班`;
+        document.getElementById("info-grade-label").value = appState.gradeLabel;
+
+        const newList = generateClassList(gNum, cCount);
+        appState.classList = newList;
+        appState.classData = {};
+        newList.forEach(c => {
+          appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
+        });
+        appState.selectedClass = newList[0];
+        saveState();
+        renderApp();
+        showToast(`已成功套用【${gName}】共 ${cCount} 個班級（${newList[0]}~${newList[newList.length-1]}）！`, "🎉");
+      });
+
       // Quick Stepper Buttons (+ / -) for easy mobile tapping
       document.querySelectorAll(".btn-step-plus").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -1284,13 +1475,11 @@
       });
 
       // Input Focus: Header is not sticky so it scrolls away naturally.
-      // Clear 0 on tap so user doesn't have to backspace.
       document.querySelectorAll(".score-input, #input-class-note, #info-school, #info-year, #info-subject, #info-exam-period, #info-teacher, #info-version, #info-grade-label, #import-code-area, #textarea-reflection").forEach(input => {
         input.addEventListener("focus", function() {
           if (this.classList.contains("score-input") && this.value === "0") {
             this.value = "";
           }
-          // Smooth center scroll into view
           setTimeout(() => {
             this.scrollIntoView({ behavior: "smooth", block: "center" });
           }, 150);
@@ -1381,6 +1570,7 @@
         const codePayload = {
           class: cId,
           subject: appState.subject,
+          grade: appState.gradeNum,
           c100: d.c100,
           c90: d.c90,
           c80: d.c80,
@@ -1404,14 +1594,14 @@
       });
 
       // Settings inputs
-      document.getElementById("info-school").addEventListener("input", e => { appState.school = e.target.value; saveState(); });
-      document.getElementById("info-year").addEventListener("input", e => { appState.year = e.target.value; saveState(); });
-      document.getElementById("info-semester").addEventListener("change", e => { appState.semester = e.target.value; saveState(); });
-      document.getElementById("info-subject").addEventListener("input", e => { appState.subject = e.target.value; saveState(); });
-      document.getElementById("info-exam-period").addEventListener("input", e => { appState.examPeriod = e.target.value; saveState(); });
-      document.getElementById("info-teacher").addEventListener("input", e => { appState.teacher = e.target.value; saveState(); });
-      document.getElementById("info-version").addEventListener("input", e => { appState.version = e.target.value; saveState(); });
-      document.getElementById("info-grade-label").addEventListener("input", e => { appState.gradeLabel = e.target.value; saveState(); });
+      document.getElementById("info-school").addEventListener("input", e => { appState.school = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-year").addEventListener("input", e => { appState.year = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-semester").addEventListener("change", e => { appState.semester = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-subject").addEventListener("input", e => { appState.subject = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-exam-period").addEventListener("input", e => { appState.examPeriod = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-teacher").addEventListener("input", e => { appState.teacher = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-version").addEventListener("input", e => { appState.version = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-grade-label").addEventListener("input", e => { appState.gradeLabel = e.target.value; saveState(); renderApp(); });
 
       // Total Classes Select
       document.getElementById("select-total-classes").addEventListener("change", e => {
@@ -1428,36 +1618,26 @@
       document.getElementById("btn-apply-classes").addEventListener("click", () => {
         const selVal = document.getElementById("select-total-classes").value;
         let newList = [];
-        if (selVal === "11") {
-          newList = ["401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411"];
-          appState.gradeLabel = "四年級 1~11 班";
-        } else if (selVal === "11-g3") {
-          newList = ["301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311"];
-          appState.gradeLabel = "三年級 1~11 班";
-        } else if (selVal === "custom") {
+        if (selVal === "custom") {
           const raw = document.getElementById("input-custom-classes").value.trim();
           if (raw) {
             newList = raw.split(/[,，\s]+/).filter(x => x.length > 0);
           }
         } else {
           const count = parseInt(selVal, 10);
-          newList = [];
-          for (let i = 1; i <= count; i++) {
-            newList.push(`40${i < 10 ? i : i}`);
-          }
-          appState.gradeLabel = `四年級 1~${count} 班`;
+          newList = generateClassList(appState.gradeNum || "3", count);
+          const gName = gradeNameMap[appState.gradeNum] || `${appState.gradeNum}年級`;
+          appState.gradeLabel = `${gName} 1~${count} 班`;
+          document.getElementById("info-grade-label").value = appState.gradeLabel;
         }
 
         if (newList.length > 0) {
           appState.classList = newList;
+          appState.classData = {};
           newList.forEach(c => {
-            if (!appState.classData[c]) {
-              appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
-            }
+            appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
           });
-          if (!appState.classList.includes(appState.selectedClass)) {
-            appState.selectedClass = appState.classList[0];
-          }
+          appState.selectedClass = newList[0];
           saveState();
           renderApp();
           showToast(`已成功套用學年班級清單（共 ${newList.length} 班）！`);
@@ -1559,7 +1739,7 @@
         saveState();
       });
       document.getElementById("btn-insert-sample").addEventListener("click", () => {
-        const snippet = `\n\n【中年級段考後續補強叮嚀】：\n1. 請各班將 60 分以下學童列冊，進行個別弱點章節診斷測驗。\n2. 於下週二前由各班任課教師回傳「差異化學習輔導紀錄表」。`;
+        const snippet = `\n\n【定期評量後續學習扶助叮嚀】：\n1. 請各班將 60 分以下學童列冊，進行個別弱點章節診斷測驗。\n2. 由各班任課教師回傳差異化學習輔導紀錄，落實課堂即時補救。`;
         const ta = document.getElementById("textarea-reflection");
         ta.value += snippet;
         appState.reflection = ta.value;
@@ -1583,20 +1763,17 @@
       });
 
       // Demo & Reset
-      document.getElementById("btn-load-demo").addEventListener("click", loadDemo11Classes);
+      document.getElementById("btn-load-demo").addEventListener("click", loadUniversalDemo);
       document.getElementById("btn-reset-all").addEventListener("click", () => {
-        appState.classList = ["401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411"];
-        appState.gradeLabel = "四年級 1~11 班";
         appState.classData = {};
         appState.reflection = "";
-        appState.selectedClass = "401";
         appState.classList.forEach(c => {
           appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
         });
         saveState();
         generateReflection(false);
         renderApp();
-        showToast("已重設為 11 個班級空白填報狀態。");
+        showToast("已清空所有班級填報數據。");
       });
 
       // Print Preview Modal
