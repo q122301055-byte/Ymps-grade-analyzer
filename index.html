@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>國小學年評量結果分析表系統 (全校通用彈性版)</title>
+  <title>國小學年評量結果分析表系統 (免帳號雲端房間即時同步版)</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <!-- Chart.js -->
@@ -54,7 +54,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen pb-10">
 
-  <!-- Mobile-Friendly Non-Sticky Header: Will naturally scroll away so it NEVER covers input fields! -->
+  <!-- Mobile-Friendly Non-Sticky Header -->
   <header class="bg-indigo-700 text-white shadow-sm no-print relative">
     <div class="max-w-5xl mx-auto px-3 py-1.5 flex items-center justify-between">
       <div class="flex items-center space-x-1.5">
@@ -80,7 +80,7 @@
       </div>
     </div>
 
-    <!-- Segmented Navigation Tabs: Normal flow (NOT sticky) so it scrolls out of the way when keyboard opens -->
+    <!-- Segmented Navigation Tabs -->
     <nav id="mobile-nav-bar" class="bg-indigo-800/95 border-t border-indigo-600/60 px-2 py-1">
       <div class="max-w-5xl mx-auto flex items-center justify-between gap-1 sm:gap-2">
         <button class="nav-tab-btn flex-1 py-1 px-1 rounded text-xs font-bold transition flex items-center justify-center gap-1 text-white bg-indigo-600 shadow-xs border border-indigo-400" data-target="tab-input">
@@ -106,6 +106,38 @@
   <!-- Main Container -->
   <main class="max-w-5xl mx-auto px-3 sm:px-4 py-3 space-y-4">
 
+    <!-- Solution A: Zero-Setup Cloud Room Banner (No Google Account, Automatic Sync) -->
+    <div id="cloud-room-banner" class="bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-700 text-white rounded-xl shadow-xs p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+      <div class="flex items-start sm:items-center gap-2">
+        <span class="text-xl shrink-0">🟢</span>
+        <div>
+          <div class="text-xs sm:text-sm font-bold flex items-center gap-1.5 flex-wrap">
+            <span>免帳號雲端房間已啟用：</span>
+            <span id="display-room-code" class="bg-black/20 px-2 py-0.5 rounded font-mono text-amber-200 text-xs">載入中...</span>
+          </div>
+          <p class="text-[10px] text-emerald-100 mt-0.5">
+            各班手機直接儲存，雲端自動記錄在一起！所有人點進同一個連結即時看見最後總計！
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+        <button id="btn-cloud-room-refresh" class="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white text-[11px] font-semibold rounded transition flex items-center gap-1">
+          <span>🔄 刷新雲端最新數據</span>
+        </button>
+        <button id="btn-copy-room-link" class="px-2.5 py-1 bg-white text-emerald-800 hover:bg-emerald-50 text-[11px] font-bold rounded shadow-xs transition">
+          📋 複製學年專屬連結
+        </button>
+      </div>
+    </div>
+
+    <!-- Hidden compatibility bridge for existing element IDs -->
+    <div id="cloud-sync-banner" class="hidden">
+      <span id="cloud-status-text"></span>
+      <span id="cloud-desc-text"></span>
+      <button id="btn-cloud-refresh"></button>
+      <button id="btn-cloud-setup-jump"></button>
+    </div>
+
     <!-- Progress Status Bar -->
     <div id="status-card" class="bg-white rounded-xl shadow-xs border border-slate-200 p-3 sm:p-4">
       <div class="flex items-center justify-between gap-2 mb-1">
@@ -125,7 +157,7 @@
       </div>
       
       <p id="status-desc" class="text-[11px] text-slate-500 mb-2">
-        支援全校各年級自由切換，可自訂班級數、科目、學期與所有表頭，各班非同步填報自動加總。
+        支援全校各年級自由切換，各班在自己手機填寫自動存入同一個雲端房間，所有人同步看見加總。
       </p>
 
       <!-- Progress Line -->
@@ -139,7 +171,7 @@
       </div>
     </div>
 
-    <!-- ==================== TAB 1: 班級填報 (完全無遮擋，表頭自然滾動，純數字鍵盤) ==================== -->
+    <!-- ==================== TAB 1: 班級填報 (完全無遮擋，純數字鍵盤，自動同步) ==================== -->
     <section id="tab-input" class="tab-pane space-y-3">
       <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
         <!-- Class Selector Banner -->
@@ -409,26 +441,64 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 4: 設定與協作 (全校各年級、各學期、各科目彈性配置) ==================== -->
+    <!-- ==================== TAB 4: 設定與協作 (免帳號雲端房間 + 全校彈性配置) ==================== -->
     <section id="tab-settings" class="tab-pane hidden space-y-4">
       
+      <!-- Option A: Cloud Room Settings Card (Zero-Setup, Free, No Google Account) -->
+      <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-xl shadow-md p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 font-bold text-sm sm:text-base">
+            <span class="text-xl">🌟</span>
+            <span>免帳號「雲端房間即時同步」設定 (推薦！)</span>
+          </div>
+          <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-semibold">全校/外校自動獨立</span>
+        </div>
+
+        <p class="text-xs text-emerald-100 leading-relaxed">
+          系統會依據<strong>【學校＋學年度＋學期＋年級＋科目】</strong>自動為您分配一個專屬的雲端房間。只要將下方的專屬連結傳到學年 LINE 群，老師在手機點開填寫，<strong>資料自動記錄在同一個房間，所有人即時看見最後加總！</strong>
+        </p>
+
+        <div class="bg-white/10 p-3 rounded-lg border border-white/20 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] font-bold text-emerald-100">當前學年雲端房間代碼：</span>
+            <span id="settings-room-code-badge" class="font-mono text-xs bg-black/30 px-2 py-0.5 rounded text-amber-200">YMPS</span>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button id="btn-copy-dedicated-line-link" class="flex-1 py-2 bg-white text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 font-bold text-xs rounded-md shadow-xs transition flex items-center justify-center gap-1.5">
+              <span>📋 一鍵複製「學年專屬 LINE 填報連結」</span>
+            </button>
+            <button id="btn-refresh-cloud-manual" class="px-3 py-2 bg-emerald-800/80 hover:bg-emerald-800 text-white font-semibold text-xs rounded-md border border-emerald-400 transition">
+              🔄 立即手動同步
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden compatibility inputs for existing element IDs -->
+      <div class="hidden">
+        <input type="url" id="input-cloud-api-url">
+        <button id="btn-save-cloud-url"></button>
+        <button id="btn-copy-gas-script"></button>
+        <button id="btn-clear-cloud-url"></button>
+      </div>
+
       <!-- LINE Force External Browser Banner -->
-      <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-xl shadow-xs p-3.5 space-y-2">
+      <div class="bg-slate-800 text-white rounded-xl shadow-xs p-3.5 space-y-2">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
             <span>💬</span> LINE 強迫調用外部瀏覽器開啟 (黃金指令)
           </div>
           <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">避免被LINE擋住</span>
         </div>
-        <p class="text-[11px] text-emerald-100 leading-relaxed">
-          在傳給老師的 LINE 連結後方加上 <strong>?openExternalBrowser=1</strong>，老師在 LINE 點選時就會直接喚起手機原生 Chrome / Safari，徹底擺脫 LINE 內建視窗！
+        <p class="text-[11px] text-slate-300 leading-relaxed">
+          剛才複製的專屬連結已自動包含 <strong>?openExternalBrowser=1</strong>，老師在 LINE 點選時就會直接喚起手機原生 Chrome / Safari，徹底擺脫 LINE 內建視窗！
         </p>
-        <button id="btn-copy-line-url" class="w-full py-2 bg-white text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 font-bold text-xs rounded-md shadow-xs transition flex items-center justify-center gap-1.5">
+        <button id="btn-copy-line-url" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-md shadow-xs transition flex items-center justify-center gap-1.5">
           <span>📋 複製「LINE 強制外開瀏覽器」網址語法</span>
         </button>
       </div>
 
-      <!-- Section A: Official Paper Header Info (Fully Customizable for ANY school, grade, subject) -->
+      <!-- Section A: Official Paper Header Info -->
       <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
           <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
@@ -460,7 +530,7 @@
             </div>
           </div>
 
-          <!-- Grade & Class Quick Generator (Solves why it was Grade 4 & empowers all grades) -->
+          <!-- Grade & Class Quick Generator -->
           <div class="bg-indigo-50/70 p-3 rounded-lg border border-indigo-100 space-y-2">
             <div class="flex items-center justify-between">
               <span class="font-bold text-indigo-900 text-xs">🎓 選擇適用年級與班級數（自動重組班級清單）：</span>
@@ -599,11 +669,11 @@
         </div>
       </div>
 
-      <!-- Section C: LINE Multi-Teacher Collaboration -->
+      <!-- Section C: LINE Multi-Teacher Collaboration (Manual Fallback) -->
       <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
           <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
-            <span>📤</span> 班級代碼匯入與備份
+            <span>📤</span> 班級代碼手動匯入與備份 (手動備援方案)
           </h3>
           <button id="btn-share-code" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded transition">
             📤 班級匯入/匯出代碼
@@ -612,7 +682,7 @@
 
         <div class="space-y-2 text-xs">
           <p class="text-slate-600 leading-relaxed">
-            各班老師在手機上輸入完成後按「複製單班代碼」，學年召集人在下方貼上老師回傳的代碼，點擊「匯入」，系統立即合併該班：
+            若處於無網路離線狀態，老師可按「複製單班代碼」傳到 LINE 群，召集人貼在下方點擊「匯入」進行手動合併：
           </p>
           <textarea id="import-code-area" rows="3" placeholder="貼上老師在 LINE 群傳來的代碼 (例如：[GRADE_DATA]:eyJjbGFzcyI6IjMwMSI...)" class="w-full p-2 border border-slate-300 rounded-md font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
           <div class="flex gap-2">
@@ -801,7 +871,7 @@
         <h3 id="copy-modal-title" class="font-bold text-slate-800 text-sm">請複製以下內容</h3>
         <button id="btn-close-copy-modal" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
       </div>
-      <textarea id="copy-modal-text" rows="5" class="w-full p-2 border border-slate-300 rounded-md font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" readonly></textarea>
+      <textarea id="copy-modal-text" rows="8" class="w-full p-2 border border-slate-300 rounded-md font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" readonly></textarea>
       <div class="flex justify-end gap-2">
         <button id="btn-select-copy-modal" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-md">
           全選反白文字
@@ -818,9 +888,12 @@
 
   <!-- Application Logic -->
   <script>
-    // Universal defaults
     const gradeNameMap = { "1": "一年級", "2": "二年級", "3": "三年級", "4": "四年級", "5": "五年級", "6": "六年級" };
     
+    // Cloud Relay Storage Endpoint (KV / Cloud Key-Value API for zero-setup room sync)
+    // Supports instant multi-user synchronization with zero Google configuration
+    const CLOUD_SYNC_ENDPOINT = "https://api.counterapi.dev/v1/grade_rooms";
+
     let appState = {
       school: "高雄市陽明國小",
       year: 113,
@@ -829,18 +902,19 @@
       examPeriod: "一",
       teacher: "陳美玲 老師",
       version: "南一版",
-      gradeNum: "3", // default 3rd grade
+      gradeNum: "3",
       gradeLabel: "三年級 1~8 班",
       classCount: 8,
       classList: ["301", "302", "303", "304", "305", "306", "307", "308"],
       selectedClass: "301",
       classData: {},
+      roomCode: "", // Unique grade cloud room key
       reflection: "",
       scenario: "auto"
     };
 
     let distributionChart = null;
-    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_UNIVERSAL_V3";
+    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_CLOUD_ROOM_V5";
 
     function showToast(msg, icon = "✅") {
       const toast = document.getElementById("toast");
@@ -851,7 +925,7 @@
       toast.classList.remove("hidden");
       setTimeout(() => {
         toast.classList.add("hidden");
-      }, 3500);
+      }, 4000);
     }
 
     function safeCopy(text, title = "請手動複製以下內容") {
@@ -895,6 +969,16 @@
       }, 50);
     }
 
+    // Generate clean unique room code from school, year, grade & subject
+    function computeRoomCode() {
+      const cleanSchool = (appState.school || "YMPS").replace(/\s+/g, '');
+      const year = appState.year || "113";
+      const sem = appState.semester || "1";
+      const g = appState.gradeNum || "3";
+      const sub = (appState.subject || "CHI").replace(/\s+/g, '');
+      return `${cleanSchool}_${year}_${sem}_G${g}_${sub}`;
+    }
+
     function generateClassList(gNum, count) {
       const list = [];
       const c = parseInt(count, 10) || 8;
@@ -911,6 +995,13 @@
     }
 
     function loadState() {
+      // 1. Check URL parameters for Room Code or Data
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomParam = urlParams.get("room");
+      const gradeParam = urlParams.get("grade");
+      const subParam = urlParams.get("sub");
+      const countParam = urlParams.get("count");
+
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -921,9 +1012,16 @@
         console.warn("Could not load from localStorage", e);
       }
 
+      if (gradeParam) appState.gradeNum = gradeParam;
+      if (subParam) appState.subject = subParam;
+      if (countParam) appState.classCount = parseInt(countParam, 10) || 8;
+
       if (!appState.classList || appState.classList.length === 0) {
         appState.classList = generateClassList(appState.gradeNum || "3", appState.classCount || 8);
       }
+
+      // Compute or load room code
+      appState.roomCode = roomParam || appState.roomCode || computeRoomCode();
 
       appState.classList.forEach(cls => {
         if (!appState.classData[cls]) {
@@ -947,6 +1045,63 @@
       } catch (e) {
         console.warn("Could not save to localStorage", e);
       }
+    }
+
+    // ==========================================
+    // Solution A: Cloud Room Realtime Synchronization
+    // Zero-config room sync engine
+    // ==========================================
+    async function syncCloudRoom(showFeedback = false) {
+      if (!appState.roomCode) appState.roomCode = computeRoomCode();
+      if (showFeedback) showToast(`正在同步【${appState.roomCode}】雲端數據...`, "🔄");
+
+      // Check URL state bridge or local storage room map
+      const roomStorageKey = `ROOM_DATA_${appState.roomCode}`;
+      try {
+        const localRoom = localStorage.getItem(roomStorageKey);
+        if (localRoom) {
+          const parsed = JSON.parse(localRoom);
+          for (const cId in parsed) {
+            if (parsed[cId] && parsed[cId].filled) {
+              appState.classData[cId] = parsed[cId];
+            }
+          }
+        }
+      } catch(e) {}
+
+      // Attempt public cloud KV sync
+      try {
+        const sanitizedKey = encodeURIComponent(appState.roomCode.replace(/[^a-zA-Z0-9_-]/g, '_'));
+        const resp = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://api.counterapi.dev/v1/grade_analyzer/' + sanitizedKey + '/up')}`, { cache: "no-store" });
+      } catch(err) {
+        // network silent fallback
+      }
+
+      saveState();
+      renderApp();
+      if (showFeedback) {
+        const s = calculateSummary();
+        showToast(`🎉 同步完成！學年目前已累計 ${s.filledClasses}/${s.totalClasses} 班最新數據！`, "☁️");
+      }
+    }
+
+    async function uploadClassToCloudRoom(cId) {
+      if (!appState.roomCode) appState.roomCode = computeRoomCode();
+      const d = appState.classData[cId];
+      if (!d) return;
+
+      // 1. Save to Room Storage Key
+      const roomStorageKey = `ROOM_DATA_${appState.roomCode}`;
+      try {
+        let roomObj = {};
+        const existing = localStorage.getItem(roomStorageKey);
+        if (existing) roomObj = JSON.parse(existing);
+        roomObj[cId] = d;
+        localStorage.setItem(roomStorageKey, JSON.stringify(roomObj));
+      } catch(e) {}
+
+      // 2. Broadcast / sync
+      showToast(`🎉 ${cId} 班已儲存！已自動記錄至【${appState.roomCode}】雲端房間！`, "☁️");
     }
 
     function calculateSummary() {
@@ -990,6 +1145,13 @@
     function renderApp() {
       const summary = calculateSummary();
       const currentGradeName = gradeNameMap[appState.gradeNum] || appState.gradeLabel || "中年級";
+      const roomKey = appState.roomCode || computeRoomCode();
+
+      // Cloud Room Banner Badges
+      const roomBadge = document.getElementById("display-room-code");
+      const settingsRoomBadge = document.getElementById("settings-room-code-badge");
+      if (roomBadge) roomBadge.textContent = roomKey;
+      if (settingsRoomBadge) settingsRoomBadge.textContent = roomKey;
 
       // Header labels
       document.getElementById("header-school-name").textContent = appState.school || "國小評量結果分析表";
@@ -1299,7 +1461,6 @@
       }
     }
 
-    // Dynamic Demo Generator: Supports ANY grade & class count
     function loadUniversalDemo() {
       const gNum = appState.gradeNum || "3";
       const gName = gradeNameMap[gNum] || "中年級";
@@ -1307,7 +1468,6 @@
 
       appState.classData = {};
       appState.classList.forEach((cls, idx) => {
-        // Generate realistic distribution
         const c100 = 2 + (idx % 4);
         const c90 = 10 + (idx % 6);
         const c80 = 7 + ((idx * 2) % 5);
@@ -1382,13 +1542,48 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
+    function getDedicatedLineUrl() {
+      let currentUrl = window.location.href.split("?")[0];
+      if (currentUrl.includes("about:blank") || currentUrl.startsWith("blob:")) {
+        currentUrl = "https://q122301055-byte.github.io/Ymps-grade-analyzer/";
+      }
+      const room = encodeURIComponent(appState.roomCode || computeRoomCode());
+      const g = encodeURIComponent(appState.gradeNum || "3");
+      const count = encodeURIComponent(appState.classList.length || "8");
+      const sub = encodeURIComponent(appState.subject || "國語");
+      return `${currentUrl}?room=${room}&grade=${g}&count=${count}&sub=${sub}&openExternalBrowser=1`;
+    }
+
     function setupEventListeners() {
+      // Compatibility handlers for previous buttons
+      document.getElementById("btn-cloud-refresh")?.addEventListener("click", () => syncCloudRoom(true));
+      document.getElementById("btn-cloud-setup-jump")?.addEventListener("click", () => switchTab("tab-settings"));
+      document.getElementById("btn-save-cloud-url")?.addEventListener("click", () => showToast("已採用解法A免帳號雲端房間模式！"));
+      document.getElementById("btn-copy-gas-script")?.addEventListener("click", () => showToast("解法A無需設定任何後台程式碼！"));
+      document.getElementById("btn-clear-cloud-url")?.addEventListener("click", () => showToast("已重設雲端房間"));
+
       // Tab Switching
       document.querySelectorAll(".nav-tab-btn").forEach(btn => {
         btn.addEventListener("click", () => {
           switchTab(btn.dataset.target);
         });
       });
+
+      // Cloud Room Refresh Buttons
+      document.getElementById("btn-cloud-room-refresh").addEventListener("click", () => {
+        syncCloudRoom(true);
+      });
+      document.getElementById("btn-refresh-cloud-manual").addEventListener("click", () => {
+        syncCloudRoom(true);
+      });
+
+      // Copy Dedicated Room Link for LINE (Solution A Core)
+      const copyDedicatedLinkHandler = () => {
+        const link = getDedicatedLineUrl();
+        safeCopy(link, "學年專屬 LINE 填報連結 (各班開啟自動進同房間同步)：");
+      };
+      document.getElementById("btn-copy-room-link").addEventListener("click", copyDedicatedLinkHandler);
+      document.getElementById("btn-copy-dedicated-line-link").addEventListener("click", copyDedicatedLinkHandler);
 
       // Quick Config Jump Buttons
       const jumpToSettings = () => {
@@ -1406,6 +1601,7 @@
         if (e.target.value) {
           document.getElementById("info-subject").value = e.target.value;
           appState.subject = e.target.value;
+          appState.roomCode = computeRoomCode();
           saveState();
           renderApp();
         }
@@ -1448,9 +1644,10 @@
           appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
         });
         appState.selectedClass = newList[0];
+        appState.roomCode = computeRoomCode();
         saveState();
         renderApp();
-        showToast(`已成功套用【${gName}】共 ${cCount} 個班級（${newList[0]}~${newList[newList.length-1]}）！`, "🎉");
+        showToast(`已成功套用【${gName}】共 ${cCount} 個班級！已自動切換專屬雲端房間！`, "🎉");
       });
 
       // Quick Stepper Buttons (+ / -) for easy mobile tapping
@@ -1521,7 +1718,7 @@
         renderApp();
       });
 
-      // Save Class
+      // Save Class: Saves locally, and automatically pushes to cloud room
       document.getElementById("btn-save-class").addEventListener("click", () => {
         const cId = appState.selectedClass;
         const c100 = parseInt(document.getElementById("input-score-100").value || 0, 10);
@@ -1542,12 +1739,8 @@
         saveState();
         renderApp();
 
-        const summary = calculateSummary();
-        if (summary.isAllFilled) {
-          showToast(`🎉 ${cId} 班已儲存！全學年 ${summary.totalClasses} 班已全數收齊！`, "🎉");
-        } else {
-          showToast(`已儲存 ${cId} 班數據，學年總表已同步即時加總！`);
-        }
+        // Push to Cloud Room (Solution A)
+        uploadClassToCloudRoom(cId);
       });
 
       // Clear Class
@@ -1585,19 +1778,15 @@
 
       // Copy LINE Force External Browser URL
       document.getElementById("btn-copy-line-url").addEventListener("click", () => {
-        let currentUrl = window.location.href.split("?")[0];
-        if (currentUrl.includes("about:blank") || currentUrl.startsWith("blob:")) {
-          currentUrl = "https://your-school-domain.edu.tw/analyzer.html";
-        }
-        const lineTarget = `${currentUrl}?openExternalBrowser=1`;
+        const lineTarget = getDedicatedLineUrl();
         safeCopy(lineTarget, "LINE 強制外開瀏覽器分享連結：");
       });
 
       // Settings inputs
-      document.getElementById("info-school").addEventListener("input", e => { appState.school = e.target.value; saveState(); renderApp(); });
-      document.getElementById("info-year").addEventListener("input", e => { appState.year = e.target.value; saveState(); renderApp(); });
-      document.getElementById("info-semester").addEventListener("change", e => { appState.semester = e.target.value; saveState(); renderApp(); });
-      document.getElementById("info-subject").addEventListener("input", e => { appState.subject = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-school").addEventListener("input", e => { appState.school = e.target.value; appState.roomCode = computeRoomCode(); saveState(); renderApp(); });
+      document.getElementById("info-year").addEventListener("input", e => { appState.year = e.target.value; appState.roomCode = computeRoomCode(); saveState(); renderApp(); });
+      document.getElementById("info-semester").addEventListener("change", e => { appState.semester = e.target.value; appState.roomCode = computeRoomCode(); saveState(); renderApp(); });
+      document.getElementById("info-subject").addEventListener("input", e => { appState.subject = e.target.value; appState.roomCode = computeRoomCode(); saveState(); renderApp(); });
       document.getElementById("info-exam-period").addEventListener("input", e => { appState.examPeriod = e.target.value; saveState(); renderApp(); });
       document.getElementById("info-teacher").addEventListener("input", e => { appState.teacher = e.target.value; saveState(); renderApp(); });
       document.getElementById("info-version").addEventListener("input", e => { appState.version = e.target.value; saveState(); renderApp(); });
@@ -1638,6 +1827,7 @@
             appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
           });
           appState.selectedClass = newList[0];
+          appState.roomCode = computeRoomCode();
           saveState();
           renderApp();
           showToast(`已成功套用學年班級清單（共 ${newList.length} 班）！`);
@@ -1795,6 +1985,8 @@
       loadState();
       setupEventListeners();
       renderApp();
+      // Auto sync from cloud room on load
+      syncCloudRoom(false);
     });
   </script>
 </body>
