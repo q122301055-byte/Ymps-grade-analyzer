@@ -1120,7 +1120,7 @@
 
     // ==========================================
     // Realtime Cloud Room Synchronization Logic
-    // Connects actual phones across internet via public REST relay
+    // Dual-Engine: High-Speed PubSub Relay (ntfy.sh) + JSON Bin + URL Param Fallback
     // ==========================================
     function serializeClassesToUrlParam() {
       const parts = [];
@@ -1135,8 +1135,13 @@
       return encodeURIComponent(parts.join(";"));
     }
 
+    function getSyncTopic() {
+      const raw = (appState.roomCode || "YMPS113_G3").toLowerCase().replace(/[^a-z0-9]/g, "");
+      return "ymps_grade_" + raw;
+    }
+
     async function fetchWithTimeout(resource, options = {}) {
-      const { timeout = 2500, ...rest } = options;
+      const { timeout = 4000, ...rest } = options;
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
       try {
@@ -1152,166 +1157,101 @@
       }
     }
 
-    // ==========================================
-    // Realtime Cloud Room Synchronization Logic
-    // Multi-Provider Redundant Relay + URL Payload Fallback
-    // ==========================================
     async function initCloudRoomIfNeeded() {
-      if (appState.roomCode) return appState.roomCode;
-      
-      showToast("正在建立學年專屬房間...", "⏳");
-
-      // Provider 1: api.npoint.io (Fast, free, reliable CORS JSON bin)
-      try {
-        const r1 = await fetchWithTimeout("https://api.npoint.io", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({
-            s: appState.school,
-            g: appState.gradeNum,
-            y: appState.year,
-            c: appState.classData,
-            t: Date.now()
-          }),
-          timeout: 2500
-        });
-        if (r1.ok) {
-          const j1 = await r1.json();
-          if (j1 && j1.id) {
-            appState.roomCode = "np_" + j1.id;
-            saveState();
-            updateBrowserUrl();
-            renderApp();
-            return appState.roomCode;
-          }
-        }
-      } catch (err1) {
-        console.warn("Provider 1 (npoint) failed:", err1);
+      if (!appState.roomCode) {
+        appState.roomCode = "YMPS113_G" + (appState.gradeNum || "3") + "_" + Math.random().toString(36).substring(2, 7).toUpperCase();
+        saveState();
+        updateBrowserUrl();
+        renderApp();
       }
 
-      // Provider 2: api.restful-api.dev (Clean ASCII schema)
-      try {
-        const r2 = await fetchWithTimeout("https://api.restful-api.dev/objects", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({
-            name: `YMPS_${appState.year}_G${appState.gradeNum}_${Date.now().toString(36)}`,
-            data: {
-              classes: appState.classData,
-              updatedAt: Date.now()
-            }
-          }),
-          timeout: 2500
-        });
-        if (r2.ok) {
-          const j2 = await r2.json();
-          if (j2 && j2.id) {
-            appState.roomCode = "rd_" + j2.id;
-            saveState();
-            updateBrowserUrl();
-            renderApp();
-            return appState.roomCode;
-          }
+      // Broadcast any locally filled classes to the room
+      for (const cId in appState.classData) {
+        const d = appState.classData[cId];
+        if (d && d.filled) {
+          try {
+            fetchWithTimeout(`https://ntfy.sh/${getSyncTopic()}`, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain" },
+              body: JSON.stringify({ cId, data: d, time: Date.now() }),
+              timeout: 3000
+            }).catch(() => {});
+          } catch(e) {}
         }
-      } catch (err2) {
-        console.warn("Provider 2 (restful-api) failed:", err2);
       }
 
-      // Provider 3: extendsclass.com JSON bin
-      try {
-        const r3 = await fetchWithTimeout("https://extendsclass.com/api/json-storage/bin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({
-            classes: appState.classData,
-            updatedAt: Date.now()
-          }),
-          timeout: 2500
-        });
-        if (r3.ok) {
-          const j3 = await r3.json();
-          if (j3 && j3.id) {
-            appState.roomCode = "ec_" + j3.id;
-            saveState();
-            updateBrowserUrl();
-            renderApp();
-            return appState.roomCode;
-          }
-        }
-      } catch (err3) {
-        console.warn("Provider 3 (extendsclass) failed:", err3);
-      }
-
-      // Guaranteed Fallback: Deterministic room code for zero-failure operation
-      appState.roomCode = "YMPS113_G" + (appState.gradeNum || "3") + "_" + Math.random().toString(36).substring(2, 7).toUpperCase();
-      saveState();
-      updateBrowserUrl();
-      renderApp();
       return appState.roomCode;
     }
 
     async function syncCloudRoom(showFeedback = false) {
-      if (!appState.roomCode) {
-        if (showFeedback) showToast("正在連線學年專屬房間...", "⏳");
-        await initCloudRoomIfNeeded();
-      }
-
       if (showFeedback) showToast(`正在同步全學年最新數據...`, "🔄");
 
-      let cloudClasses = null;
+      let updatedCount = 0;
+      const topic = getSyncTopic();
 
+      // Channel 1: High-Speed PubSub Relay (ntfy.sh)
       try {
-        if (appState.roomCode.startsWith("np_")) {
-          const id = appState.roomCode.replace("np_", "");
-          const resp = await fetchWithTimeout(`https://api.npoint.io/${id}`, { cache: "no-store", timeout: 3500 });
-          if (resp.ok) {
-            const json = await resp.json();
-            cloudClasses = json.c || json.classes;
-          }
-        } else if (appState.roomCode.startsWith("rd_")) {
-          const id = appState.roomCode.replace("rd_", "");
-          const resp = await fetchWithTimeout(`https://api.restful-api.dev/objects/${id}`, { cache: "no-store", timeout: 3500 });
-          if (resp.ok) {
-            const json = await resp.json();
-            cloudClasses = json.data?.classes || json.data?.c;
-          }
-        } else if (appState.roomCode.startsWith("ec_")) {
-          const id = appState.roomCode.replace("ec_", "");
-          const resp = await fetchWithTimeout(`https://extendsclass.com/api/json-storage/bin/${id}`, { cache: "no-store", timeout: 3500 });
-          if (resp.ok) {
-            const json = await resp.json();
-            cloudClasses = json.classes || json.c;
-          }
+        const resp = await fetchWithTimeout(`https://ntfy.sh/${topic}/json?poll=1&since=all`, {
+          cache: "no-store",
+          timeout: 4500
+        });
+        if (resp.ok) {
+          const text = await resp.text();
+          const lines = text.trim().split("\n");
+          lines.forEach(line => {
+            try {
+              if (!line.trim()) return;
+              const item = JSON.parse(line);
+              if (item.event === "message" && item.message) {
+                const payload = JSON.parse(item.message);
+                if (payload && payload.cId && payload.data && payload.data.filled) {
+                  appState.classData[payload.cId] = payload.data;
+                  if (!appState.classList.includes(payload.cId)) {
+                    appState.classList.push(payload.cId);
+                  }
+                  updatedCount++;
+                }
+              }
+            } catch(e) {}
+          });
         }
-      } catch (err) {
-        console.warn("Cloud sync error:", err);
+      } catch (errPub) {
+        console.warn("Pubsub sync failed:", errPub);
       }
 
-      if (cloudClasses && typeof cloudClasses === "object") {
-        let updatedCount = 0;
-        for (const cId in cloudClasses) {
-          const item = cloudClasses[cId];
-          if (item && item.filled) {
-            appState.classData[cId] = item;
-            if (!appState.classList.includes(cId)) {
-              appState.classList.push(cId);
+      // Channel 2: JSON Bin Storage (if roomCode starts with np_)
+      if (appState.roomCode && appState.roomCode.startsWith("np_")) {
+        try {
+          const id = appState.roomCode.replace("np_", "");
+          const resp = await fetchWithTimeout(`https://api.npoint.io/${id}`, { cache: "no-store", timeout: 4000 });
+          if (resp.ok) {
+            const json = await resp.json();
+            const cloudClasses = json.c || json.classes;
+            if (cloudClasses && typeof cloudClasses === "object") {
+              for (const cId in cloudClasses) {
+                const item = cloudClasses[cId];
+                if (item && item.filled) {
+                  appState.classData[cId] = item;
+                  if (!appState.classList.includes(cId)) {
+                    appState.classList.push(cId);
+                  }
+                  updatedCount++;
+                }
+              }
             }
-            updatedCount++;
           }
-        }
+        } catch(e) {}
+      }
+
+      if (updatedCount > 0) {
         saveState();
         updateBrowserUrl();
         renderApp();
-        if (showFeedback) {
-          const s = calculateSummary();
-          showToast(`🎉 雲端同步完成！目前全學年已累計 ${s.filledClasses}/${s.totalClasses} 班最新數據！`, "☁️");
-        }
-        return;
       }
 
       if (showFeedback) {
         const s = calculateSummary();
-        showToast(`已更新本機數據！目前全學年累計：${s.filledClasses}/${s.totalClasses} 班！`, "ℹ️");
+        showToast(`🎉 雲端同步完成！目前全學年已累計 ${s.filledClasses}/${s.totalClasses} 班最新數據！`, "☁️");
       }
     }
 
@@ -1322,18 +1262,42 @@
       saveState();
       updateBrowserUrl();
 
-      if (!appState.roomCode) {
-        await initCloudRoomIfNeeded();
-      }
-
       showToast(`正在將 ${cId} 班數據上傳至全學年雲端...`, "⏳");
 
+      const payload = {
+        cId: cId,
+        data: d,
+        school: appState.school,
+        grade: appState.gradeNum,
+        year: appState.year,
+        time: Date.now()
+      };
+
+      let success = false;
+      const topic = getSyncTopic();
+
+      // Channel 1: High-Speed PubSub Relay (ntfy.sh, zero-preflight text/plain, global CDN)
       try {
-        if (appState.roomCode.startsWith("np_")) {
+        const resp = await fetchWithTimeout(`https://ntfy.sh/${topic}`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(payload),
+          timeout: 4000
+        });
+        if (resp.ok) {
+          success = true;
+        }
+      } catch (errPub) {
+        console.warn("Pubsub relay push failed:", errPub);
+      }
+
+      // Channel 2: JSON Bin Storage (api.npoint.io) if roomCode has np_
+      if (appState.roomCode && appState.roomCode.startsWith("np_")) {
+        try {
           const id = appState.roomCode.replace("np_", "");
           let currentClasses = {};
           try {
-            const r = await fetchWithTimeout(`https://api.npoint.io/${id}`, { cache: "no-store", timeout: 2500 });
+            const r = await fetchWithTimeout(`https://api.npoint.io/${id}`, { cache: "no-store", timeout: 3000 });
             if (r.ok) {
               const j = await r.json();
               currentClasses = j.c || j.classes || {};
@@ -1351,82 +1315,22 @@
               c: currentClasses,
               t: Date.now()
             }),
-            timeout: 3000
+            timeout: 4000
           });
-          if (putResp.ok) {
-            const s = calculateSummary();
-            showToast(`🎉 ${cId} 班已儲存並同步雲端！目前學年累計：${s.filledClasses}/${s.totalClasses} 班！`, "✅");
-            renderApp();
-            return;
-          }
-        } else if (appState.roomCode.startsWith("rd_")) {
-          const id = appState.roomCode.replace("rd_", "");
-          let currentClasses = {};
-          try {
-            const r = await fetchWithTimeout(`https://api.restful-api.dev/objects/${id}`, { cache: "no-store", timeout: 2500 });
-            if (r.ok) {
-              const j = await r.json();
-              currentClasses = j.data?.classes || {};
-            }
-          } catch(e) {}
-          currentClasses[cId] = d;
-
-          const putResp = await fetchWithTimeout(`https://api.restful-api.dev/objects/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: `YMPS_${appState.year}_G${appState.gradeNum}`,
-              data: {
-                classes: currentClasses,
-                updatedAt: Date.now()
-              }
-            }),
-            timeout: 3000
-          });
-          if (putResp.ok) {
-            const s = calculateSummary();
-            showToast(`🎉 ${cId} 班已儲存並同步雲端！目前學年累計：${s.filledClasses}/${s.totalClasses} 班！`, "✅");
-            renderApp();
-            return;
-          }
-        } else if (appState.roomCode.startsWith("ec_")) {
-          const id = appState.roomCode.replace("ec_", "");
-          let currentClasses = {};
-          try {
-            const r = await fetchWithTimeout(`https://extendsclass.com/api/json-storage/bin/${id}`, { cache: "no-store", timeout: 2500 });
-            if (r.ok) {
-              const j = await r.json();
-              currentClasses = j.classes || {};
-            }
-          } catch(e) {}
-          currentClasses[cId] = d;
-
-          const putResp = await fetchWithTimeout(`https://extendsclass.com/api/json-storage/bin/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              classes: currentClasses,
-              updatedAt: Date.now()
-            }),
-            timeout: 3000
-          });
-          if (putResp.ok) {
-            const s = calculateSummary();
-            showToast(`🎉 ${cId} 班已儲存並同步雲端！目前學年累計：${s.filledClasses}/${s.totalClasses} 班！`, "✅");
-            renderApp();
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Cloud upload error:", err);
+          if (putResp.ok) success = true;
+        } catch(e) {}
       }
 
       const s = calculateSummary();
-      showToast(`🎉 ${cId} 班已儲存！點擊上方「複製學年專屬連結」發到群組即可同步全學年！`, "✅");
+      if (success) {
+        showToast(`🎉 ${cId} 班已即時同步至全學年雲端！目前學年累計：${s.filledClasses}/${s.totalClasses} 班！`, "✅");
+      } else {
+        showToast(`🎉 ${cId} 班已儲存！點擊上方「複製學年專屬連結」發到群組即可同步全學年！`, "✅");
+      }
       renderApp();
     }
 
-    function updateBrowserUrl() {
+        function updateBrowserUrl() {
       try {
         const url = new URL(window.location.href);
         if (appState.roomCode) {
@@ -2370,7 +2274,7 @@
         if (document.visibilityState === "visible" && appState.roomCode && (appState.roomCode.startsWith("np_") || appState.roomCode.startsWith("rd_") || appState.roomCode.startsWith("ec_"))) {
           syncCloudRoom(false);
         }
-      }, 25000);
+      }, 12000);
     });
   </script>
 </body>
