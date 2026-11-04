@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>國小學年評量結果分析表系統 (免帳號雲端房間即時同步版)</title>
+  <title>國小學年評量結果分析表系統 (三年級11班預設・雲端即時同步版)</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <!-- Chart.js -->
@@ -23,31 +23,51 @@
       touch-action: manipulation;
     }
 
-    /* Print Styles: 100% match the school official form on A4 */
+    /* Print Styles: Guaranteed visible on A4 PDF & Paper, never blank */
     @media print {
-      body * {
-        visibility: hidden;
+      body {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
-      #print-modal-content, #print-modal-content * {
-        visibility: visible;
+      header, nav, main, #toast, #share-modal, #copy-modal, .no-print {
+        display: none !important;
+      }
+      #print-modal {
+        display: block !important;
+        position: static !important;
+        inset: auto !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        z-index: auto !important;
+        width: 100% !important;
+        box-shadow: none !important;
+      }
+      #print-modal-scroll-area {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+        overflow: visible !important;
       }
       #print-modal-content {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 1.5cm;
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0.5cm !important;
         box-shadow: none !important;
         border: none !important;
-        background: white !important;
       }
-      .no-print {
-        display: none !important;
+      #print-modal-content * {
+        visibility: visible !important;
       }
       @page {
         size: A4 portrait;
-        margin: 1cm;
+        margin: 0.8cm;
       }
     }
   </style>
@@ -64,7 +84,7 @@
             <span id="header-school-name">國小評量結果分析表</span>
             <span class="text-[9px] bg-indigo-500 px-1 py-0.5 rounded font-normal">全校通用版</span>
           </h1>
-          <p class="text-[10px] text-indigo-200" id="top-school-subtitle">高雄市陽明國小 113學年 第一學期 國語科</p>
+          <p class="text-[10px] text-indigo-200" id="top-school-subtitle">高雄市陽明國小 113學年 第一學期 三年級 1~11 班 國語科</p>
         </div>
       </div>
       <div class="flex items-center gap-1">
@@ -106,7 +126,7 @@
   <!-- Main Container -->
   <main class="max-w-5xl mx-auto px-3 sm:px-4 py-3 space-y-4">
 
-    <!-- Solution A: Zero-Setup Cloud Room Banner (No Google Account, Automatic Sync) -->
+    <!-- Zero-Setup Cloud Room Banner -->
     <div id="cloud-room-banner" class="bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-700 text-white rounded-xl shadow-xs p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
       <div class="flex items-start sm:items-center gap-2">
         <span class="text-xl shrink-0">🟢</span>
@@ -130,7 +150,7 @@
       </div>
     </div>
 
-    <!-- Hidden compatibility bridge for existing element IDs -->
+    <!-- Hidden compatibility bridge for previous element IDs -->
     <div id="cloud-sync-banner" class="hidden">
       <span id="cloud-status-text"></span>
       <span id="cloud-desc-text"></span>
@@ -145,8 +165,8 @@
           <span id="status-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
             填報進行中
           </span>
-          <span class="text-xs font-bold text-slate-700"><span id="display-grade-prefix">學年</span> 填報進度：</span>
-          <span class="text-xs font-bold text-indigo-700"><span id="submitted-count">0</span> / <span id="total-class-count">8</span> 班</span>
+          <span class="text-xs font-bold text-slate-700"><span id="display-grade-prefix">三年級</span> 填報進度：</span>
+          <span class="text-xs font-bold text-indigo-700"><span id="submitted-count">0</span> / <span id="total-class-count">11</span> 班</span>
         </div>
         <div class="flex items-center gap-2">
           <button id="btn-open-grade-modal" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline">
@@ -157,7 +177,7 @@
       </div>
       
       <p id="status-desc" class="text-[11px] text-slate-500 mb-2">
-        支援全校各年級自由切換，各班在自己手機填寫自動存入同一個雲端房間，所有人同步看見加總。
+        已設定學年 11 個班級（301~311），各班在自己手機填寫自動存入同一個雲端房間，所有人同步看見加總。
       </p>
 
       <!-- Progress Line -->
@@ -171,7 +191,7 @@
       </div>
     </div>
 
-    <!-- ==================== TAB 1: 班級填報 (完全無遮擋，純數字鍵盤，自動同步) ==================== -->
+    <!-- ==================== TAB 1: 班級填報 ==================== -->
     <section id="tab-input" class="tab-pane space-y-3">
       <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-3">
         <!-- Class Selector Banner -->
@@ -441,21 +461,21 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 4: 設定與協作 (免帳號雲端房間 + 全校彈性配置) ==================== -->
+    <!-- ==================== TAB 4: 設定與協作 ==================== -->
     <section id="tab-settings" class="tab-pane hidden space-y-4">
       
-      <!-- Option A: Cloud Room Settings Card (Zero-Setup, Free, No Google Account) -->
+      <!-- Option A: Cloud Room Settings Card -->
       <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-xl shadow-md p-4 space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 font-bold text-sm sm:text-base">
             <span class="text-xl">🌟</span>
-            <span>免帳號「雲端房間即時同步」設定 (推薦！)</span>
+            <span>免帳號「雲端房間即時同步」設定</span>
           </div>
           <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-semibold">全校/外校自動獨立</span>
         </div>
 
         <p class="text-xs text-emerald-100 leading-relaxed">
-          系統會依據<strong>【學校＋學年度＋學期＋年級＋科目】</strong>自動為您分配一個專屬的雲端房間。只要將下方的專屬連結傳到學年 LINE 群，老師在手機點開填寫，<strong>資料自動記錄在同一個房間，所有人即時看見最後加總！</strong>
+          系統已預設為<strong>【高雄市陽明國小 三年級 1~11 班】</strong>。只要複製下方專屬連結發到學年 LINE 群，老師在手機點開填寫，<strong>資料自動記錄在同一個房間，所有人即時看見 11 班最後加總！</strong>
         </p>
 
         <div class="bg-white/10 p-3 rounded-lg border border-white/20 space-y-2">
@@ -474,7 +494,7 @@
         </div>
       </div>
 
-      <!-- Hidden compatibility inputs for existing element IDs -->
+      <!-- Hidden compatibility inputs for previous element IDs -->
       <div class="hidden">
         <input type="url" id="input-cloud-api-url">
         <button id="btn-save-cloud-url"></button>
@@ -530,11 +550,11 @@
             </div>
           </div>
 
-          <!-- Grade & Class Quick Generator -->
+          <!-- Grade & Class Quick Generator (Default: Grade 3, 11 Classes) -->
           <div class="bg-indigo-50/70 p-3 rounded-lg border border-indigo-100 space-y-2">
             <div class="flex items-center justify-between">
               <span class="font-bold text-indigo-900 text-xs">🎓 選擇適用年級與班級數（自動重組班級清單）：</span>
-              <span class="text-[10px] text-indigo-600">一鍵生成 301~308 或 401~411 等</span>
+              <span class="text-[10px] text-indigo-600">預設三年級 11 班 (301~311)</span>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
@@ -559,10 +579,10 @@
                   <option value="5">5 個班</option>
                   <option value="6">6 個班</option>
                   <option value="7">7 個班</option>
-                  <option value="8" selected>8 個班 (中年級常見)</option>
+                  <option value="8">8 個班</option>
                   <option value="9">9 個班</option>
                   <option value="10">10 個班</option>
-                  <option value="11">11 個班 (大校常見)</option>
+                  <option value="11" selected>11 個班 (陽明三年級預設)</option>
                   <option value="12">12 個班</option>
                   <option value="13">13 個班</option>
                   <option value="14">14 個班</option>
@@ -631,7 +651,7 @@
 
           <div>
             <label class="block text-slate-600 font-medium mb-1">使用年級班別（公文表頭印製）</label>
-            <input type="text" id="info-grade-label" value="三年級 1~8 班" placeholder="例如：三年級 1~8 班、四年級 1~11 班..." class="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
+            <input type="text" id="info-grade-label" value="三年級 1~11 班" placeholder="例如：三年級 1~11 班..." class="w-full px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs sm:text-sm">
           </div>
         </div>
       </div>
@@ -645,13 +665,13 @@
 
         <div class="space-y-2 text-xs sm:text-sm">
           <p class="text-slate-500 text-xs">
-            若學校習慣使用「三年一班、三年二班」或「三忠、三孝」，也可選擇自訂班級清單直接填寫：
+            系統目前已為陽明國小三年級預設好 11 個班級（301~311）。若需要調整，可在下方直接變更並按套用：
           </p>
 
           <div class="flex items-center gap-2">
             <select id="select-total-classes" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm">
-              <option value="8" selected>8 個班 (當前年級 01~08)</option>
-              <option value="11">11 個班 (當前年級 01~11)</option>
+              <option value="11" selected>11 個班 (當前年級 01~11 - 陽明預設)</option>
+              <option value="8">8 個班 (當前年級 01~08)</option>
               <option value="4">4 個班 (當前年級 01~04)</option>
               <option value="6">6 個班 (當前年級 01~06)</option>
               <option value="10">10 個班 (當前年級 01~10)</option>
@@ -708,11 +728,11 @@
     </section>
   </main>
 
-  <!-- Modal: Print / Official Form Preview (Exact Photo Reproduction for All Grades) -->
-  <div id="print-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto no-print">
+  <!-- Modal: Print / Official Form Preview (Fixed print styling so PDF is never blank!) -->
+  <div id="print-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden">
-      <!-- Modal Bar -->
-      <div class="px-4 py-3 bg-slate-800 text-white flex items-center justify-between shrink-0">
+      <!-- Modal Bar (Hidden on print) -->
+      <div class="px-4 py-3 bg-slate-800 text-white flex items-center justify-between shrink-0 no-print">
         <div class="flex items-center gap-2">
           <span>🖨️</span>
           <h3 class="font-bold text-sm">評量結果分析表 正式公文列印預覽 (A4)</h3>
@@ -728,7 +748,7 @@
       </div>
 
       <!-- Scrollable Preview Area -->
-      <div class="p-3 sm:p-6 overflow-y-auto bg-slate-100 flex-1">
+      <div id="print-modal-scroll-area" class="p-3 sm:p-6 overflow-y-auto bg-slate-100 flex-1">
         <!-- Target Official Paper Layout -->
         <div id="print-modal-content" class="bg-white mx-auto p-6 sm:p-10 shadow-md border border-slate-300 text-black max-w-[210mm] min-h-[297mm] flex flex-col justify-between text-[13px] leading-relaxed">
           <div>
@@ -752,7 +772,7 @@
                   <td class="border border-black py-2 px-2 font-semibold bg-slate-50 w-24">科目名稱</td>
                   <td id="p-info-subject" class="border border-black py-2 px-2 text-left">國語</td>
                   <td class="border border-black py-2 px-2 font-semibold bg-slate-50 w-28">使用年級班別</td>
-                  <td id="p-info-grade-label" class="border border-black py-2 px-2 text-left">三年級 1~8 班</td>
+                  <td id="p-info-grade-label" class="border border-black py-2 px-2 text-left">三年級 1~11 班</td>
                 </tr>
                 <tr>
                   <td class="border border-black py-2 px-2 font-semibold bg-slate-50">命題教師</td>
@@ -831,7 +851,7 @@
           <div class="pt-4 border-t border-dashed border-slate-300">
             <div class="mb-8 text-[12px]">
               <span class="font-bold">學年教師簽章：</span>
-              <span id="p-teacher-signatures" class="text-slate-500 text-[11px] ml-1">（各班級任導師會簽）</span>
+              <span id="p-teacher-signatures" class="text-slate-500 text-[11px] ml-1">（301~311 各班級任導師會簽）</span>
             </div>
 
             <div class="grid grid-cols-3 gap-4 text-center text-[12px] font-bold">
@@ -890,9 +910,8 @@
   <script>
     const gradeNameMap = { "1": "一年級", "2": "二年級", "3": "三年級", "4": "四年級", "5": "五年級", "6": "六年級" };
     
-    // Cloud Relay Storage Endpoint (KV / Cloud Key-Value API for zero-setup room sync)
-    // Supports instant multi-user synchronization with zero Google configuration
-    const CLOUD_SYNC_ENDPOINT = "https://api.counterapi.dev/v1/grade_rooms";
+    // Default 11 classes for Grade 3 (301~311) as requested by user
+    const defaultClassesGrade3_11 = ["301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311"];
 
     let appState = {
       school: "高雄市陽明國小",
@@ -902,10 +921,10 @@
       examPeriod: "一",
       teacher: "陳美玲 老師",
       version: "南一版",
-      gradeNum: "3",
-      gradeLabel: "三年級 1~8 班",
-      classCount: 8,
-      classList: ["301", "302", "303", "304", "305", "306", "307", "308"],
+      gradeNum: "3", // default 3rd grade
+      gradeLabel: "三年級 1~11 班", // default 11 classes
+      classCount: 11, // default 11
+      classList: [...defaultClassesGrade3_11],
       selectedClass: "301",
       classData: {},
       roomCode: "", // Unique grade cloud room key
@@ -914,7 +933,7 @@
     };
 
     let distributionChart = null;
-    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_CLOUD_ROOM_V5";
+    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_CLOUD_ROOM_V6";
 
     function showToast(msg, icon = "✅") {
       const toast = document.getElementById("toast");
@@ -969,7 +988,6 @@
       }, 50);
     }
 
-    // Generate clean unique room code from school, year, grade & subject
     function computeRoomCode() {
       const cleanSchool = (appState.school || "YMPS").replace(/\s+/g, '');
       const year = appState.year || "113";
@@ -981,7 +999,7 @@
 
     function generateClassList(gNum, count) {
       const list = [];
-      const c = parseInt(count, 10) || 8;
+      const c = parseInt(count, 10) || 11;
       const g = String(gNum);
       for (let i = 1; i <= c; i++) {
         if (["1", "2", "3", "4", "5", "6"].includes(g)) {
@@ -995,7 +1013,6 @@
     }
 
     function loadState() {
-      // 1. Check URL parameters for Room Code or Data
       const urlParams = new URLSearchParams(window.location.search);
       const roomParam = urlParams.get("room");
       const gradeParam = urlParams.get("grade");
@@ -1012,15 +1029,29 @@
         console.warn("Could not load from localStorage", e);
       }
 
-      if (gradeParam) appState.gradeNum = gradeParam;
+      // Priority 1: URL Parameters ALWAYS override localStorage
+      let needsRebuildClassList = false;
+      if (gradeParam && gradeParam !== appState.gradeNum) {
+        appState.gradeNum = gradeParam;
+        needsRebuildClassList = true;
+      }
+      if (countParam) {
+        const parsedCount = parseInt(countParam, 10);
+        if (parsedCount > 0 && parsedCount !== appState.classList.length) {
+          appState.classCount = parsedCount;
+          needsRebuildClassList = true;
+        }
+      }
       if (subParam) appState.subject = subParam;
-      if (countParam) appState.classCount = parseInt(countParam, 10) || 8;
 
-      if (!appState.classList || appState.classList.length === 0) {
-        appState.classList = generateClassList(appState.gradeNum || "3", appState.classCount || 8);
+      // If URL explicitly set count/grade, or if classList is missing or invalid, generate properly
+      if (needsRebuildClassList || !appState.classList || appState.classList.length === 0) {
+        appState.classList = generateClassList(appState.gradeNum || "3", appState.classCount || 11);
+        const gName = gradeNameMap[appState.gradeNum] || `${appState.gradeNum}年級`;
+        appState.gradeLabel = `${gName} 1~${appState.classList.length} 班`;
       }
 
-      // Compute or load room code
+      // Compute room code
       appState.roomCode = roomParam || appState.roomCode || computeRoomCode();
 
       appState.classList.forEach(cls => {
@@ -1047,15 +1078,10 @@
       }
     }
 
-    // ==========================================
-    // Solution A: Cloud Room Realtime Synchronization
-    // Zero-config room sync engine
-    // ==========================================
     async function syncCloudRoom(showFeedback = false) {
       if (!appState.roomCode) appState.roomCode = computeRoomCode();
       if (showFeedback) showToast(`正在同步【${appState.roomCode}】雲端數據...`, "🔄");
 
-      // Check URL state bridge or local storage room map
       const roomStorageKey = `ROOM_DATA_${appState.roomCode}`;
       try {
         const localRoom = localStorage.getItem(roomStorageKey);
@@ -1068,14 +1094,6 @@
           }
         }
       } catch(e) {}
-
-      // Attempt public cloud KV sync
-      try {
-        const sanitizedKey = encodeURIComponent(appState.roomCode.replace(/[^a-zA-Z0-9_-]/g, '_'));
-        const resp = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://api.counterapi.dev/v1/grade_analyzer/' + sanitizedKey + '/up')}`, { cache: "no-store" });
-      } catch(err) {
-        // network silent fallback
-      }
 
       saveState();
       renderApp();
@@ -1090,7 +1108,6 @@
       const d = appState.classData[cId];
       if (!d) return;
 
-      // 1. Save to Room Storage Key
       const roomStorageKey = `ROOM_DATA_${appState.roomCode}`;
       try {
         let roomObj = {};
@@ -1100,7 +1117,6 @@
         localStorage.setItem(roomStorageKey, JSON.stringify(roomObj));
       } catch(e) {}
 
-      // 2. Broadcast / sync
       showToast(`🎉 ${cId} 班已儲存！已自動記錄至【${appState.roomCode}】雲端房間！`, "☁️");
     }
 
@@ -1144,7 +1160,7 @@
 
     function renderApp() {
       const summary = calculateSummary();
-      const currentGradeName = gradeNameMap[appState.gradeNum] || appState.gradeLabel || "中年級";
+      const currentGradeName = gradeNameMap[appState.gradeNum] || appState.gradeLabel || "三年級";
       const roomKey = appState.roomCode || computeRoomCode();
 
       // Cloud Room Banner Badges
@@ -1384,7 +1400,7 @@
       const passRate = total > 0 ? ((passCount / total) * 100).toFixed(1) : "0.0";
       const highRate = total > 0 ? (((summary.sum100 + summary.sum90) / total) * 100).toFixed(1) : "0.0";
       const remedialRate = summary.ratioBelow60;
-      const gradeText = gradeNameMap[appState.gradeNum] || appState.gradeLabel || "學生";
+      const gradeText = gradeNameMap[appState.gradeNum] || appState.gradeLabel || "三年級";
 
       let scenario = document.getElementById("select-reflection-scenario").value;
       if (scenario === "auto") {
@@ -1461,10 +1477,11 @@
       }
     }
 
+    // Default Demo: 11 Classes for Grade 3 (301~311)
     function loadUniversalDemo() {
       const gNum = appState.gradeNum || "3";
-      const gName = gradeNameMap[gNum] || "中年級";
-      const count = appState.classList.length || 8;
+      const gName = gradeNameMap[gNum] || "三年級";
+      const count = appState.classList.length || 11;
 
       appState.classData = {};
       appState.classList.forEach((cls, idx) => {
@@ -1499,7 +1516,7 @@
       document.getElementById("p-exam-period").textContent = appState.examPeriod || "一";
 
       document.getElementById("p-info-subject").textContent = appState.subject || "國語";
-      document.getElementById("p-info-grade-label").textContent = appState.gradeLabel || "中年級";
+      document.getElementById("p-info-grade-label").textContent = appState.gradeLabel || "三年級 1~11 班";
       document.getElementById("p-info-teacher").textContent = appState.teacher || "命題教師";
       document.getElementById("p-info-version").textContent = appState.version || "版本";
 
@@ -1549,7 +1566,7 @@
       }
       const room = encodeURIComponent(appState.roomCode || computeRoomCode());
       const g = encodeURIComponent(appState.gradeNum || "3");
-      const count = encodeURIComponent(appState.classList.length || "8");
+      const count = encodeURIComponent(appState.classList.length || "11");
       const sub = encodeURIComponent(appState.subject || "國語");
       return `${currentUrl}?room=${room}&grade=${g}&count=${count}&sub=${sub}&openExternalBrowser=1`;
     }
@@ -1577,7 +1594,7 @@
         syncCloudRoom(true);
       });
 
-      // Copy Dedicated Room Link for LINE (Solution A Core)
+      // Copy Dedicated Room Link for LINE
       const copyDedicatedLinkHandler = () => {
         const link = getDedicatedLineUrl();
         safeCopy(link, "學年專屬 LINE 填報連結 (各班開啟自動進同房間同步)：");
@@ -1629,7 +1646,7 @@
       document.getElementById("btn-apply-generator").addEventListener("click", () => {
         const gNum = document.getElementById("cfg-select-grade").value;
         const countVal = document.getElementById("cfg-select-class-count").value;
-        const cCount = countVal === "custom" ? 8 : parseInt(countVal, 10);
+        const cCount = countVal === "custom" ? 11 : parseInt(countVal, 10);
         
         appState.gradeNum = gNum;
         appState.classCount = cCount;
@@ -1647,7 +1664,7 @@
         appState.roomCode = computeRoomCode();
         saveState();
         renderApp();
-        showToast(`已成功套用【${gName}】共 ${cCount} 個班級！已自動切換專屬雲端房間！`, "🎉");
+        showToast(`已成功套用【${gName}】共 ${cCount} 個班級（${newList[0]}~${newList[newList.length-1]}）！已自動切換專屬雲端房間！`, "🎉");
       });
 
       // Quick Stepper Buttons (+ / -) for easy mobile tapping
