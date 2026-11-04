@@ -126,16 +126,16 @@
   <!-- Main Container -->
   <main class="max-w-5xl mx-auto px-3 sm:px-4 py-3 space-y-4">
 
-    <!-- Zero-Setup Cloud Room Banner -->
+    <!-- Zero-Setup Cloud Room Banner: Realtime Inter-Device Sync -->
     <div id="cloud-room-banner" class="bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-700 text-white rounded-xl shadow-xs p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
       <div class="flex items-start sm:items-center gap-2">
-        <span class="text-xl shrink-0">🟢</span>
+        <span class="text-xl shrink-0" id="cloud-room-status-icon">🟢</span>
         <div>
           <div class="text-xs sm:text-sm font-bold flex items-center gap-1.5 flex-wrap">
-            <span>免帳號雲端房間已啟用：</span>
+            <span id="cloud-room-title-text">免帳號雲端房間已啟用：</span>
             <span id="display-room-code" class="bg-black/20 px-2 py-0.5 rounded font-mono text-amber-200 text-xs">載入中...</span>
           </div>
-          <p class="text-[10px] text-emerald-100 mt-0.5">
+          <p class="text-[10px] text-emerald-100 mt-0.5" id="cloud-room-desc-text">
             各班手機直接儲存，雲端自動記錄在一起！所有人點進同一個連結即時看見最後總計！
           </p>
         </div>
@@ -728,7 +728,7 @@
     </section>
   </main>
 
-  <!-- Modal: Print / Official Form Preview (Fixed print styling so PDF is never blank!) -->
+  <!-- Modal: Print / Official Form Preview (Guaranteed visible on PDF / Print) -->
   <div id="print-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden">
       <!-- Modal Bar (Hidden on print) -->
@@ -913,6 +913,10 @@
     // Default 11 classes for Grade 3 (301~311) as requested by user
     const defaultClassesGrade3_11 = ["301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311"];
 
+    // Cloud Room Engine Endpoints (CORS-enabled free public REST relay)
+    const CLOUD_API_BASE = "https://api.restful-api.dev/objects";
+    const JSONBLOB_API_BASE = "https://jsonblob.com/api/jsonBlob";
+
     let appState = {
       school: "高雄市陽明國小",
       year: 113,
@@ -927,13 +931,13 @@
       classList: [...defaultClassesGrade3_11],
       selectedClass: "301",
       classData: {},
-      roomCode: "", // Unique grade cloud room key
+      roomCode: "", // Real remote cloud room ID
       reflection: "",
       scenario: "auto"
     };
 
     let distributionChart = null;
-    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_CLOUD_ROOM_V6";
+    const STORAGE_KEY = "SCHOOL_GRADE_ANALYZER_CLOUD_ROOM_V7";
 
     function showToast(msg, icon = "✅") {
       const toast = document.getElementById("toast");
@@ -988,7 +992,7 @@
       }, 50);
     }
 
-    function computeRoomCode() {
+    function computeRoomSlug() {
       const cleanSchool = (appState.school || "YMPS").replace(/\s+/g, '');
       const year = appState.year || "113";
       const sem = appState.semester || "1";
@@ -1044,15 +1048,15 @@
       }
       if (subParam) appState.subject = subParam;
 
-      // If URL explicitly set count/grade, or if classList is missing or invalid, generate properly
       if (needsRebuildClassList || !appState.classList || appState.classList.length === 0) {
         appState.classList = generateClassList(appState.gradeNum || "3", appState.classCount || 11);
         const gName = gradeNameMap[appState.gradeNum] || `${appState.gradeNum}年級`;
         appState.gradeLabel = `${gName} 1~${appState.classList.length} 班`;
       }
 
-      // Compute room code
-      appState.roomCode = roomParam || appState.roomCode || computeRoomCode();
+      if (roomParam) {
+        appState.roomCode = roomParam;
+      }
 
       appState.classList.forEach(cls => {
         if (!appState.classData[cls]) {
@@ -1078,46 +1082,227 @@
       }
     }
 
-    async function syncCloudRoom(showFeedback = false) {
-      if (!appState.roomCode) appState.roomCode = computeRoomCode();
-      if (showFeedback) showToast(`正在同步【${appState.roomCode}】雲端數據...`, "🔄");
+    // ==========================================
+    // Realtime Cloud Room Synchronization Logic
+    // Connects actual phones across internet via public REST relay
+    // ==========================================
+    async function initCloudRoomIfNeeded() {
+      if (appState.roomCode) return appState.roomCode;
+      
+      showToast("正在建立學年專屬雲端房間...", "⏳");
+      const defaultPayload = {
+        name: computeRoomSlug(),
+        data: {
+          school: appState.school,
+          year: appState.year,
+          grade: appState.gradeNum,
+          classes: appState.classData
+        }
+      };
 
-      const roomStorageKey = `ROOM_DATA_${appState.roomCode}`;
       try {
-        const localRoom = localStorage.getItem(roomStorageKey);
-        if (localRoom) {
-          const parsed = JSON.parse(localRoom);
-          for (const cId in parsed) {
-            if (parsed[cId] && parsed[cId].filled) {
-              appState.classData[cId] = parsed[cId];
-            }
+        const resp = await fetch(CLOUD_API_BASE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(defaultPayload)
+        });
+        if (resp.ok) {
+          const resJson = await resp.json();
+          if (resJson && resJson.id) {
+            appState.roomCode = resJson.id;
+            saveState();
+            renderApp();
+            updateBrowserUrl();
+            return resJson.id;
           }
         }
-      } catch(e) {}
+      } catch (err) {
+        console.warn("Primary cloud creation failed, fallback to jsonblob...", err);
+      }
 
-      saveState();
-      renderApp();
+      try {
+        const resp2 = await fetch(JSONBLOB_API_BASE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(defaultPayload.data)
+        });
+        if (resp2.ok) {
+          const location = resp2.headers.get("Location") || "";
+          const blobId = location.split("/").pop();
+          if (blobId) {
+            appState.roomCode = "jb_" + blobId;
+            saveState();
+            renderApp();
+            updateBrowserUrl();
+            return appState.roomCode;
+          }
+        }
+      } catch (err2) {
+        console.error("Fallback creation failed:", err2);
+      }
+
+      return null;
+    }
+
+    async function syncCloudRoom(showFeedback = false) {
+      if (!appState.roomCode) {
+        if (showFeedback) showToast("尚未連線雲端房間，請先點擊複製專屬連結發給老師！", "ℹ️");
+        return;
+      }
+
+      if (showFeedback) showToast(`正在同步雲端最新數據...`, "🔄");
+
+      try {
+        let cloudClasses = null;
+
+        if (appState.roomCode.startsWith("jb_")) {
+          const blobId = appState.roomCode.replace("jb_", "");
+          const resp = await fetch(`${JSONBLOB_API_BASE}/${blobId}`, { cache: "no-store" });
+          if (resp.ok) {
+            const json = await resp.json();
+            cloudClasses = json.classes || json;
+          }
+        } else {
+          const resp = await fetch(`${CLOUD_API_BASE}/${appState.roomCode}`, { cache: "no-store" });
+          if (resp.ok) {
+            const json = await resp.json();
+            cloudClasses = json.data?.classes || json.data;
+          }
+        }
+
+        if (cloudClasses && typeof cloudClasses === "object") {
+          let updatedCount = 0;
+          for (const cId in cloudClasses) {
+            const item = cloudClasses[cId];
+            if (item && item.filled) {
+              appState.classData[cId] = item;
+              if (!appState.classList.includes(cId)) {
+                appState.classList.push(cId);
+              }
+              updatedCount++;
+            }
+          }
+          saveState();
+          renderApp();
+          if (showFeedback) {
+            const s = calculateSummary();
+            showToast(`🎉 雲端同步完成！目前全學年已累計 ${s.filledClasses}/${s.totalClasses} 班最新數據！`, "☁️");
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn("Cloud sync error:", err);
+      }
+
       if (showFeedback) {
-        const s = calculateSummary();
-        showToast(`🎉 同步完成！學年目前已累計 ${s.filledClasses}/${s.totalClasses} 班最新數據！`, "☁️");
+        showToast("雲端連線失敗，請確認網路正常後再試", "⚠️");
       }
     }
 
     async function uploadClassToCloudRoom(cId) {
-      if (!appState.roomCode) appState.roomCode = computeRoomCode();
       const d = appState.classData[cId];
       if (!d) return;
 
-      const roomStorageKey = `ROOM_DATA_${appState.roomCode}`;
-      try {
-        let roomObj = {};
-        const existing = localStorage.getItem(roomStorageKey);
-        if (existing) roomObj = JSON.parse(existing);
-        roomObj[cId] = d;
-        localStorage.setItem(roomStorageKey, JSON.stringify(roomObj));
-      } catch(e) {}
+      saveState();
 
-      showToast(`🎉 ${cId} 班已儲存！已自動記錄至【${appState.roomCode}】雲端房間！`, "☁️");
+      if (!appState.roomCode) {
+        const roomId = await initCloudRoomIfNeeded();
+        if (!roomId) {
+          showToast(`已儲存於本機。請點擊「複製學年專屬連結」發到群組開啟雲端連線！`, "ℹ️");
+          return;
+        }
+      }
+
+      showToast(`正在將 ${cId} 班數據上傳至全學年雲端...`, "⏳");
+
+      try {
+        let currentClasses = {};
+
+        if (appState.roomCode.startsWith("jb_")) {
+          const blobId = appState.roomCode.replace("jb_", "");
+          try {
+            const r = await fetch(`${JSONBLOB_API_BASE}/${blobId}`, { cache: "no-store" });
+            if (r.ok) {
+              const j = await r.json();
+              currentClasses = j.classes || {};
+            }
+          } catch(e) {}
+          currentClasses[cId] = d;
+
+          const putResp = await fetch(`${JSONBLOB_API_BASE}/${blobId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              school: appState.school,
+              grade: appState.gradeNum,
+              classes: currentClasses
+            })
+          });
+          if (putResp.ok) {
+            const s = calculateSummary();
+            showToast(`🎉 ${cId} 班已儲存並同步雲端！目前學年累計：${s.filledClasses}/${s.totalClasses} 班！`, "✅");
+            renderApp();
+            return;
+          }
+        } else {
+          try {
+            const r = await fetch(`${CLOUD_API_BASE}/${appState.roomCode}`, { cache: "no-store" });
+            if (r.ok) {
+              const j = await r.json();
+              currentClasses = j.data?.classes || {};
+            }
+          } catch(e) {}
+          currentClasses[cId] = d;
+
+          const putResp = await fetch(`${CLOUD_API_BASE}/${appState.roomCode}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: computeRoomSlug(),
+              data: {
+                school: appState.school,
+                grade: appState.gradeNum,
+                classes: currentClasses
+              }
+            })
+          });
+          if (putResp.ok) {
+            const s = calculateSummary();
+            showToast(`🎉 ${cId} 班已儲存並同步雲端！目前學年累計：${s.filledClasses}/${s.totalClasses} 班！`, "✅");
+            renderApp();
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Cloud upload error:", err);
+      }
+
+      showToast(`已成功儲存至本機！`, "✅");
+    }
+
+    function updateBrowserUrl() {
+      if (!appState.roomCode) return;
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("room", appState.roomCode);
+        url.searchParams.set("grade", appState.gradeNum || "3");
+        url.searchParams.set("count", appState.classList.length || "11");
+        url.searchParams.set("sub", appState.subject || "國語");
+        url.searchParams.set("openExternalBrowser", "1");
+        window.history.replaceState({}, "", url.toString());
+      } catch(e) {}
+    }
+
+    function getDedicatedLineUrl() {
+      let currentUrl = window.location.href.split("?")[0];
+      if (currentUrl.includes("about:blank") || currentUrl.startsWith("blob:")) {
+        currentUrl = "https://q122301055-byte.github.io/Ymps-grade-analyzer/";
+      }
+      const room = encodeURIComponent(appState.roomCode || "");
+      const g = encodeURIComponent(appState.gradeNum || "3");
+      const count = encodeURIComponent(appState.classList.length || "11");
+      const sub = encodeURIComponent(appState.subject || "國語");
+      return `${currentUrl}?room=${room}&grade=${g}&count=${count}&sub=${sub}&openExternalBrowser=1`;
     }
 
     function calculateSummary() {
@@ -1161,13 +1346,24 @@
     function renderApp() {
       const summary = calculateSummary();
       const currentGradeName = gradeNameMap[appState.gradeNum] || appState.gradeLabel || "三年級";
-      const roomKey = appState.roomCode || computeRoomCode();
 
       // Cloud Room Banner Badges
       const roomBadge = document.getElementById("display-room-code");
       const settingsRoomBadge = document.getElementById("settings-room-code-badge");
-      if (roomBadge) roomBadge.textContent = roomKey;
-      if (settingsRoomBadge) settingsRoomBadge.textContent = roomKey;
+      const statusIcon = document.getElementById("cloud-room-status-icon");
+      const titleText = document.getElementById("cloud-room-title-text");
+
+      if (appState.roomCode) {
+        if (roomBadge) roomBadge.textContent = appState.roomCode.substring(0, 16);
+        if (settingsRoomBadge) settingsRoomBadge.textContent = appState.roomCode.substring(0, 16);
+        if (statusIcon) statusIcon.textContent = "🟢";
+        if (titleText) titleText.textContent = "免帳號雲端房間已連線：";
+      } else {
+        if (roomBadge) roomBadge.textContent = "尚未連線 (點右方複製連結)";
+        if (settingsRoomBadge) settingsRoomBadge.textContent = "點擊複製連結即自動開啟";
+        if (statusIcon) statusIcon.textContent = "🟡";
+        if (titleText) titleText.textContent = "雲端房間狀態：";
+      }
 
       // Header labels
       document.getElementById("header-school-name").textContent = appState.school || "國小評量結果分析表";
@@ -1559,24 +1755,12 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function getDedicatedLineUrl() {
-      let currentUrl = window.location.href.split("?")[0];
-      if (currentUrl.includes("about:blank") || currentUrl.startsWith("blob:")) {
-        currentUrl = "https://q122301055-byte.github.io/Ymps-grade-analyzer/";
-      }
-      const room = encodeURIComponent(appState.roomCode || computeRoomCode());
-      const g = encodeURIComponent(appState.gradeNum || "3");
-      const count = encodeURIComponent(appState.classList.length || "11");
-      const sub = encodeURIComponent(appState.subject || "國語");
-      return `${currentUrl}?room=${room}&grade=${g}&count=${count}&sub=${sub}&openExternalBrowser=1`;
-    }
-
     function setupEventListeners() {
       // Compatibility handlers for previous buttons
       document.getElementById("btn-cloud-refresh")?.addEventListener("click", () => syncCloudRoom(true));
       document.getElementById("btn-cloud-setup-jump")?.addEventListener("click", () => switchTab("tab-settings"));
-      document.getElementById("btn-save-cloud-url")?.addEventListener("click", () => showToast("已採用解法A免帳號雲端房間模式！"));
-      document.getElementById("btn-copy-gas-script")?.addEventListener("click", () => showToast("解法A無需設定任何後台程式碼！"));
+      document.getElementById("btn-save-cloud-url")?.addEventListener("click", () => showToast("已切換為免帳號雲端房間模式！"));
+      document.getElementById("btn-copy-gas-script")?.addEventListener("click", () => showToast("免帳號雲端模式無需設定任何後台！"));
       document.getElementById("btn-clear-cloud-url")?.addEventListener("click", () => showToast("已重設雲端房間"));
 
       // Tab Switching
@@ -1594,13 +1778,17 @@
         syncCloudRoom(true);
       });
 
-      // Copy Dedicated Room Link for LINE
-      const copyDedicatedLinkHandler = () => {
+      // Unified Room Link Copy Handler: Creates room if needed, and copies complete LINE link
+      const copyDedicatedLinkHandler = async () => {
+        if (!appState.roomCode) {
+          await initCloudRoomIfNeeded();
+        }
         const link = getDedicatedLineUrl();
-        safeCopy(link, "學年專屬 LINE 填報連結 (各班開啟自動進同房間同步)：");
+        safeCopy(link, "學年專屬 LINE 填報連結 (已內建外開指令，各班開啟自動進同房間同步)：");
       };
       document.getElementById("btn-copy-room-link").addEventListener("click", copyDedicatedLinkHandler);
       document.getElementById("btn-copy-dedicated-line-link").addEventListener("click", copyDedicatedLinkHandler);
+      document.getElementById("btn-copy-line-url").addEventListener("click", copyDedicatedLinkHandler);
 
       // Quick Config Jump Buttons
       const jumpToSettings = () => {
@@ -1618,7 +1806,6 @@
         if (e.target.value) {
           document.getElementById("info-subject").value = e.target.value;
           appState.subject = e.target.value;
-          appState.roomCode = computeRoomCode();
           saveState();
           renderApp();
         }
@@ -1661,10 +1848,10 @@
           appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
         });
         appState.selectedClass = newList[0];
-        appState.roomCode = computeRoomCode();
+        appState.roomCode = ""; // Reset room to generate new grade room on demand
         saveState();
         renderApp();
-        showToast(`已成功套用【${gName}】共 ${cCount} 個班級（${newList[0]}~${newList[newList.length-1]}）！已自動切換專屬雲端房間！`, "🎉");
+        showToast(`已成功套用【${gName}】共 ${cCount} 個班級（${newList[0]}~${newList[newList.length-1]}）！`, "🎉");
       });
 
       // Quick Stepper Buttons (+ / -) for easy mobile tapping
@@ -1735,7 +1922,7 @@
         renderApp();
       });
 
-      // Save Class: Saves locally, and automatically pushes to cloud room
+      // Save Class: Saves locally and immediately uploads to remote cloud room
       document.getElementById("btn-save-class").addEventListener("click", () => {
         const cId = appState.selectedClass;
         const c100 = parseInt(document.getElementById("input-score-100").value || 0, 10);
@@ -1756,7 +1943,7 @@
         saveState();
         renderApp();
 
-        // Push to Cloud Room (Solution A)
+        // Push to Real Remote Cloud Room
         uploadClassToCloudRoom(cId);
       });
 
@@ -1793,17 +1980,11 @@
         safeCopy(compactCode, `已複製 ${cId} 班級代碼 (可直接貼到學年 LINE 群)：`);
       });
 
-      // Copy LINE Force External Browser URL
-      document.getElementById("btn-copy-line-url").addEventListener("click", () => {
-        const lineTarget = getDedicatedLineUrl();
-        safeCopy(lineTarget, "LINE 強制外開瀏覽器分享連結：");
-      });
-
       // Settings inputs
-      document.getElementById("info-school").addEventListener("input", e => { appState.school = e.target.value; appState.roomCode = computeRoomCode(); saveState(); renderApp(); });
-      document.getElementById("info-year").addEventListener("input", e => { appState.year = e.target.value; appState.roomCode = computeRoomCode(); saveState(); renderApp(); });
-      document.getElementById("info-semester").addEventListener("change", e => { appState.semester = e.target.value; appState.roomCode = computeRoomCode(); saveState(); renderApp(); });
-      document.getElementById("info-subject").addEventListener("input", e => { appState.subject = e.target.value; appState.roomCode = computeRoomCode(); saveState(); renderApp(); });
+      document.getElementById("info-school").addEventListener("input", e => { appState.school = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-year").addEventListener("input", e => { appState.year = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-semester").addEventListener("change", e => { appState.semester = e.target.value; saveState(); renderApp(); });
+      document.getElementById("info-subject").addEventListener("input", e => { appState.subject = e.target.value; saveState(); renderApp(); });
       document.getElementById("info-exam-period").addEventListener("input", e => { appState.examPeriod = e.target.value; saveState(); renderApp(); });
       document.getElementById("info-teacher").addEventListener("input", e => { appState.teacher = e.target.value; saveState(); renderApp(); });
       document.getElementById("info-version").addEventListener("input", e => { appState.version = e.target.value; saveState(); renderApp(); });
@@ -1844,7 +2025,6 @@
             appState.classData[c] = { c100: 0, c90: 0, c80: 0, c70: 0, c60: 0, cBelow60: 0, note: "", filled: false };
           });
           appState.selectedClass = newList[0];
-          appState.roomCode = computeRoomCode();
           saveState();
           renderApp();
           showToast(`已成功套用學年班級清單（共 ${newList.length} 班）！`);
@@ -2002,8 +2182,10 @@
       loadState();
       setupEventListeners();
       renderApp();
-      // Auto sync from cloud room on load
-      syncCloudRoom(false);
+      // Auto sync from cloud room on load if room exists in URL
+      if (appState.roomCode) {
+        syncCloudRoom(false);
+      }
     });
   </script>
 </body>
